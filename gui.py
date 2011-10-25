@@ -11,6 +11,7 @@ import datetime
 import time
 import getpass
 import logging
+import re
 from statusnet import *
 
 logging.basicConfig()
@@ -37,6 +38,7 @@ class cFrame(wx.Frame):
     intervaloTL = 15
     txtDescripcion = ''
     me = None #Variable con datos del usuario, no implementada aun
+    primeraCargaImg = True
     #
     def __init__(self, parent, titulo, servidor, usuario, clave):
         self.parent = parent
@@ -107,12 +109,12 @@ class cFrame(wx.Frame):
         tmp2 = img_nombre.split('-')
         idu = tmp2[0] #esto es el ID del usuario, antes del primer guion
         if (not os.path.isfile(img_ruta_local)):
-            log.debug('Intentando eliminar la imagen antigua')
-            try:
-                os.remove(self.dir_imagenes + idu + '-*.*')
-                log.debug('Imagen eliminada')
-            except:
-                log.debug('No se encontro imagen antigua')
+            if self.primeraCargaImg:
+                log.debug('Intentando eliminar la imagen antigua')
+                try:
+                    self.BorrarImgAnterior(idu)
+                except:
+                    log.debug('No se encontro la imagen o no se pudo borrar')
             # Descargando nueva imagen
             try:
                 con = httplib.HTTPConnection(serv)
@@ -126,6 +128,13 @@ class cFrame(wx.Frame):
                 log.debug("Error al descargar imagen")
         else:
             log.debug('Ya existe la imagen')
+
+    def BorrarImgAnterior(self, idusuario):
+        ficheros = os.listdir(self.dir_imagenes)
+        for nombreA in ficheros:
+            if (re.search('^'+ idusuario +'-', nombreA)):
+                os.remove(self.dir_imagenes + nombreA)
+                log.debug('Se borro la imagen anterior')
 
     def InnerHTML(self, txt):
         log.debug("Inyectando HTML")
@@ -203,6 +212,9 @@ class cFrame(wx.Frame):
                 log.debug("Reiniciando timer a %s segundos", str(self.intervaloTL))
                 self.timer = threading.Timer(self.intervaloTL, self.Actualizar)
             self.timer.start()
+            #La siguiente linea especifica que de ahora en adelante no es la primera carga de imagenes
+            if self.primeraCargaImg:
+                self.primeraCargaImg = False
 
     def RedimensionVentana(self, event):
         tamano = self.GetSize()
