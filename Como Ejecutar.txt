@@ -1,0 +1,12 @@
+[Windows]
+
+Para ejecutar, doble click al archivo: PlaxedDesktop.bat
+
+[Linux]
+
+En linux me dio flojera, pero se hace entrando a la carpeta y escribiendo:
+python __init__.py
+
+(NOTA: esto tambien funciona en windows jaja)
+
+@jrcsdev
