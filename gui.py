@@ -62,8 +62,8 @@ class cFrame(wx.Frame):
         self.red = statusNet(servidor, usuario, clave)
         if self.red.estaConectado():
             log.debug('Se establecio la Coneccion')
-            self.ConfigurarVentana()
             self.VerificarDirectorios()
+            self.ConfigurarVentana()            
             self.Actualizar()
 
     def EnterEstado(self, event):
@@ -183,15 +183,15 @@ class cFrame(wx.Frame):
             log.debug("ID de ultimo mensaje recibido: %s" % str(self.ultimo))
             #Intentando crear timer
             if self.timer == None:
-                #self.timer = threading.Timer(self.intervaloTL, self.Actualizar)
+                self.timer = threading.Timer(self.intervaloTL, self.Actualizar)
                 log.debug("Creando timer a %s segundos", str(self.intervaloTL))
             else:
                 log.debug("Deteniendo el timer")
-                #self.timer.cancel()
-                #self.timer = None
+                self.timer.cancel()
+                self.timer = None
                 log.debug("Reiniciando timer a %s segundos", str(self.intervaloTL))
-                #self.timer = threading.Timer(self.intervaloTL, self.Actualizar)
-            #self.timer.start()
+                self.timer = threading.Timer(self.intervaloTL, self.Actualizar)
+            self.timer.start()
 
     def RedimensionVentana(self, event):
         tamano = self.GetSize()
