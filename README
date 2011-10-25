@@ -1,1 +1,5 @@
 Plaxed Desktop es una aplicación de escritorio para la Red Social Venezolana Plaxed.com basado en StatusNet
+
+Actualmente se está trabajando en la implementación de la API, pero se creó una interfaz sencilla que permita realizar pruebas.
+
+El hecho de estar basado en StatusNet implica que con solo modificar una línea de código se pueda implementar para otras redes que utilicen este sistema de microblogging.  Unos cambios futuros permitirán agregar los perfiles de red que el usuario prefiera.
