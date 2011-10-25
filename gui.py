@@ -63,7 +63,7 @@ class cFrame(wx.Frame):
         if self.red.estaConectado():
             log.debug('Se establecio la Coneccion')
             self.VerificarDirectorios()
-            self.ConfigurarVentana()            
+            self.ConfigurarVentana()
             self.Actualizar()
 
     def EnterEstado(self, event):
@@ -104,7 +104,16 @@ class cFrame(wx.Frame):
         img_ruta_local = self.dir_imagenes + img_nombre
         tmp_serv = self.red.servidor.split("//")
         serv = "www." + tmp_serv[1]
+        tmp2 = img_nombre.split('-')
+        idu = tmp2[0] #esto es el ID del usuario, antes del primer guion
         if (not os.path.isfile(img_ruta_local)):
+            log.debug('Intentando eliminar la imagen antigua')
+            try:
+                os.remove(self.dir_imagenes + idu + '-*.*')
+                log.debug('Imagen eliminada')
+            except:
+                log.debug('No se encontro imagen antigua')
+            # Descargando nueva imagen
             try:
                 con = httplib.HTTPConnection(serv)
                 con.request("GET", img_ruta)
@@ -115,6 +124,8 @@ class cFrame(wx.Frame):
                 log.debug("Imagen descargada")
             except:
                 log.debug("Error al descargar imagen")
+        else:
+            log.debug('Ya existe la imagen')
 
     def InnerHTML(self, txt):
         log.debug("Inyectando HTML")
