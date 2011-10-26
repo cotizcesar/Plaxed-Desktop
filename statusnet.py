@@ -59,7 +59,29 @@ class statusNet():
             dato = "{Error}"
         return dato
 
-    def TimeLine(self):
+    def Respuestas(self, ultimo=0):
+        if ultimo != 0:
+            #ultimo = ultimo + 1
+            filtro = "?since_id=" + str(ultimo)
+        else:
+            filtro = ""
+        open = urllib2.urlopen(self.apibase + '/statuses/replies.json' + filtro)
+        leido = open.read()
+        miTL = json.loads(leido)
+        return miTL
+
+    def Favoritos(self, ultimo=0):
+        if ultimo != 0:
+            #ultimo = ultimo + 1
+            filtro = "?since_id=" + str(ultimo)
+        else:
+            filtro = ""
+        open = urllib2.urlopen(self.apibase + '/favorites.json' + filtro)
+        leido = open.read()
+        miTL = json.loads(leido)
+        return miTL
+
+    def TimeLineUser(self): #Esto hay que ARREGLARLO
         open = urllib2.urlopen(self.apibase + '/statuses/user_timeline.json')
         leido = open.read()
         miTL = json.loads(leido)
@@ -76,7 +98,7 @@ class statusNet():
         miTL = json.loads(leido)
         return miTL
 
-    def TimeLinePublico(self, ultimo=0):
+    def TimeLinePublic(self, ultimo=0):
         if ultimo != 0:
             #ultimo = ultimo + 1
             filtro = "?since_id=" + str(ultimo)

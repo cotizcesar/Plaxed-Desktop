@@ -141,11 +141,32 @@ class cFrame(wx.Frame):
         self.cols[0].SetPage(txt)
         log.debug("Finalizando Inyeccion HTML")
 
+    def ActualizaBarraEstado(self):
+        origen = self.cols[0].GetOrigen()
+        Lugar = 'No definido'
+        if origen == 'tl_home':
+            Lugar = 'Inicio'
+        if origen == 'tl_public':
+            Lugar = u'Público'
+        if origen == 'replies':
+            Lugar = 'Respuestas'
+        if origen == 'favorites':
+            Lugar = 'Favoritos'
+        self.sBar.SetFields((Lugar,'Otra Info...'))
+
     def Actualizar(self):
-        log.debug("Intentando Actualizar")
+        self.ActualizaBarraEstado()
+        log.debug("Intentando Actualizar " + self.cols[0].GetOrigen())
         if self.red.estaConectado():
             log.debug("Solicitando Datos del Servidor")
-            mitl = self.red.TimeLineHome(self.ultimo)
+            if self.cols[0].origen == 'tl_home':
+                mitl = self.red.TimeLineHome(self.ultimo)
+            if self.cols[0].origen == 'tl_public':
+                mitl = self.red.TimeLinePublic(self.ultimo)
+            if self.cols[0].origen == 'replies':
+                mitl = self.red.Respuestas(self.ultimo)
+            if self.cols[0].origen == 'favorites':
+                mitl = self.red.Favoritos(self.ultimo)
             tmp = ''
             ultimo = 0
             cont = 0
@@ -282,16 +303,24 @@ class cFrame(wx.Frame):
         btn_tam = wx.Size(40,40)
         self.btnInicio = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/inicio24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, btn_tam, wx.BU_AUTODRAW)
         self.btnInicio.SetToolTipString( u"Inicio" )
+        self.btnPublico = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/publico24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, btn_tam, wx.BU_AUTODRAW)
+        self.btnPublico.SetToolTipString( u"Público" )
         self.btnRespuestas = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/respuestas24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, btn_tam, wx.BU_AUTODRAW)
         self.btnRespuestas.SetToolTipString( u"Respuestas" )
         self.btnMensajes = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/dm24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, btn_tam, wx.BU_AUTODRAW)
-        self.btnMensajes.SetToolTipString( u"Mensajes" )
+        self.btnMensajes.SetToolTipString( u"Mensajes (Aun no implementado)" )
         self.btnFavoritos = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/favoritos24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, btn_tam, wx.BU_AUTODRAW)
         self.btnFavoritos.SetToolTipString( u"Favoritos" )
         self.h_sizerBarra.Add(self.btnInicio, 0, wx.BOTTOM|wx.LEFT, 5)
+        self.h_sizerBarra.Add(self.btnPublico, 0, wx.BOTTOM, 5)
         self.h_sizerBarra.Add(self.btnRespuestas, 0, wx.BOTTOM, 5)
-        self.h_sizerBarra.Add(self.btnMensajes, 0, wx.BOTTOM, 5)
         self.h_sizerBarra.Add(self.btnFavoritos, 0, wx.BOTTOM, 5)
+        self.h_sizerBarra.Add(self.btnMensajes, 0, wx.BOTTOM, 5)
+        #
+        self.Bind(wx.EVT_BUTTON, self.CambioLinea, self.btnPublico)
+        self.Bind(wx.EVT_BUTTON, self.CambioLinea, self.btnInicio)
+        self.Bind(wx.EVT_BUTTON, self.CambioLinea, self.btnRespuestas)
+        self.Bind(wx.EVT_BUTTON, self.CambioLinea, self.btnFavoritos)
 
 
         self.h_sizer2 = wx.BoxSizer(wx.HORIZONTAL)
@@ -312,6 +341,30 @@ class cFrame(wx.Frame):
         log.debug('Ventana Configurada')
         log.debug('Cerrando Ventana de Login')
         self.parent.Hide()
+
+    def CambioLinea(self, event):
+        obj = event.GetEventObject()
+        if obj == self.btnInicio:
+            self.cols[0].SetOrigen('tl_home')
+        if obj == self.btnPublico:
+            self.cols[0].SetOrigen('tl_public')
+        if obj == self.btnRespuestas:
+            self.cols[0].SetOrigen('replies')
+        if obj == self.btnFavoritos:
+            self.cols[0].SetOrigen('favorites')
+        log.debug('Cambio de Linea de Tiempo')
+        self.txt = ''
+        self.ultimo = 0
+
+        self.InnerHTML(self.txt)
+        try:
+            self.timer.cancel()
+            self.timer = None
+            log.debug('Se detuvo el Timer')
+        except:
+            log.debug('Error al intentar detener Timer')
+        self.Actualizar()
+
 
     def NuevaColumna(self, origen):
         col = cColumna(self.panel, origen)
@@ -336,7 +389,7 @@ class cFrame(wx.Frame):
 
 class cColumna(wx.html.HtmlWindow):
 
-    origen = None
+    origen = ''
     intervalo = 0
 
     def __init__(self, parent, origen, intervalo=15):
@@ -345,6 +398,12 @@ class cColumna(wx.html.HtmlWindow):
         self.SetBorders(0)
         self.origen = origen
         self.intervalo = intervalo
+
+    def SetOrigen(self, orig):
+        self.origen = orig
+
+    def GetOrigen(self):
+        return self.origen
 
 
 class PlaxedLogin(wx.Frame):
