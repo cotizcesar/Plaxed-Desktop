@@ -61,7 +61,6 @@ class statusNet():
 
     def Respuestas(self, ultimo=0):
         if ultimo != 0:
-            #ultimo = ultimo + 1
             filtro = "?since_id=" + str(ultimo)
         else:
             filtro = ""
@@ -72,7 +71,6 @@ class statusNet():
 
     def Favoritos(self, ultimo=0):
         if ultimo != 0:
-            #ultimo = ultimo + 1
             filtro = "?since_id=" + str(ultimo)
         else:
             filtro = ""
@@ -89,7 +87,6 @@ class statusNet():
 
     def TimeLineHome(self, ultimo=0):
         if ultimo != 0:
-            #ultimo = ultimo + 1
             filtro = "?since_id=" + str(ultimo)
         else:
             filtro = ""
@@ -100,7 +97,6 @@ class statusNet():
 
     def TimeLinePublic(self, ultimo=0):
         if ultimo != 0:
-            #ultimo = ultimo + 1
             filtro = "?since_id=" + str(ultimo)
         else:
             filtro = ""

@@ -325,8 +325,6 @@ class InterfazPrincipal(wx.Frame):
         self.h_sizer2 = wx.BoxSizer(wx.HORIZONTAL)
 
         self.cols.append(self.NuevaColumna('tl_home'))
-        #self.cols.append(self.NuevaColumna('tl_replies'))
-        #self.cols.append(self.NuevaColumna('msg_direct'))
         self.v_sizer = wx.BoxSizer(wx.VERTICAL)
 
         #Se agregan los Sizers horizontales al Sizer Vertical Principal
@@ -548,12 +546,8 @@ class HiloValidar(threading.Thread):
     def run(self):
         self.red = statusNet(self.servidor, self.usuario, self.clave)
         if self.red.estaConectado():
-            #self.parent.LoginCorrecto()
             wx.CallAfter(Publisher().sendMessage, "LoginAceptado", "Thread finished!")
-            #pass
         else:
-            #self.parent.LoginFallido()
-            #pass
             wx.CallAfter(Publisher().sendMessage, "LoginRechazado", "Thread finished!")
         
         
