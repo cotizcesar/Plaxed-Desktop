@@ -1,9 +1,10 @@
-# -*- coding: utf-8 *-*
+﻿# -*- coding: utf-8 *-*
 import wx
 import wx.html
 import wx.animate
 from wx.lib.wordwrap import wordwrap
 import threading
+from wx.lib.pubsub import Publisher
 import httplib
 import sys
 import os
@@ -18,7 +19,7 @@ logging.basicConfig()
 log = logging.getLogger('GUI')
 log.setLevel(logging.DEBUG)
 
-class cFrame(wx.Frame):
+class InterfazPrincipal(wx.Frame):
     cols = []
     #
     ultimo = 0
@@ -46,10 +47,7 @@ class cFrame(wx.Frame):
         self.clave = clave
         self.servidor = servidor
         wx.Frame.__init__(self, parent, wx.ID_ANY, titulo, size=(700, 600))
-        self.SetMinSize((400, 500))
         self.Conectar(self.servidor, self.usuario, self.clave)
-        self.Show()
-        #self.parent.Close() #Se podra cerrar la ventana que creo esta?
 
     def __del__(self):
         try:
@@ -250,6 +248,7 @@ class cFrame(wx.Frame):
         log.debug('Configurando Ventana')
         icono = wx.Icon('img/iconosolo16.png', wx.BITMAP_TYPE_PNG)
         self.SetIcon(icono)
+        self.SetMinSize((400, 500))
 
         self.panel = wx.Panel(self)
 
@@ -340,17 +339,28 @@ class cFrame(wx.Frame):
         self.txt_estado.SetFocus()
         log.debug('Ventana Configurada')
         log.debug('Cerrando Ventana de Login')
+        self.Centre(wx.BOTH)
+        self.Show()
         self.parent.Hide()
 
     def CambioLinea(self, event):
         obj = event.GetEventObject()
+        origen_ant = self.cols[0].GetOrigen()
         if obj == self.btnInicio:
+            if origen_ant == 'tl_home':
+                return False
             self.cols[0].SetOrigen('tl_home')
         if obj == self.btnPublico:
+            if origen_ant == 'tl_public':
+                return False
             self.cols[0].SetOrigen('tl_public')
         if obj == self.btnRespuestas:
+            if origen_ant == 'replies':
+                return False
             self.cols[0].SetOrigen('replies')
         if obj == self.btnFavoritos:
+            if origen_ant == 'favorites':
+                return False
             self.cols[0].SetOrigen('favorites')
         log.debug('Cambio de Linea de Tiempo')
         self.txt = ''
@@ -414,10 +424,9 @@ class PlaxedLogin(wx.Frame):
     def __init__(self, parent):
         self.parent = parent
         wx.Frame.__init__(self, None, wx.ID_ANY, 'Plaxed Desktop (Demo)', size=(320, 450))
-        self.ArreglarVentana()
-        self.Show()
+        self.ConfigurarVentana()
 
-    def ArreglarVentana(self):
+    def ConfigurarVentana(self):
         log.debug('Configurando Ventana')
         icono = wx.Icon('img/iconosolo16.png', wx.BITMAP_TYPE_PNG)
         self.SetIcon(icono)
@@ -451,13 +460,15 @@ class PlaxedLogin(wx.Frame):
         self.bsizer.Add(self.ag, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 0)
         # clears the background
         self.ag.GetPlayer().UseBackgroundColour(False)
-
-        #
+        
+        
         #self.SetSizer(self.bsizer)
         self.panel.SetSizer(self.bsizer)
         self.Bind(wx.EVT_BUTTON, self.Entrar, self.boton)
+        self.sBar = self.CreateStatusBar( 1, wx.ST_SIZEGRIP, wx.ID_ANY )
         self.Centre(wx.BOTH)
         log.debug('Ventana Configurada')
+        self.Show()
 
     def Conectar(self, servidor, usuario, clave):
         log.debug('Verificando Sesion')
@@ -466,18 +477,19 @@ class PlaxedLogin(wx.Frame):
         if self.red.estaConectado():
             log.debug('Credenciales Validas')
             self.Validado = True
-            self.servidor = servidor
-            self.usuario = usuario
-            self.clave = clave
         else:
             log.debug('Credenciales Invalidas')
 
     def PlayLoader(self):
         self.ag.Play()
+    
+    def StopLoader(self):
+        self.ag.Stop()
 
     def Entrar(self, event):
-        self.txt_usuario.SetEditable(False)
-        self.txt_clave.SetEditable(False)
+        self.sBar.SetStatusText('Examinando los datos...')
+        self.txt_usuario.Disable()
+        self.txt_clave.Disable()
         usuario = self.txt_usuario.GetValue()
         usuario = usuario.strip()
         clave = self.txt_clave.GetValue()
@@ -485,27 +497,66 @@ class PlaxedLogin(wx.Frame):
         #
         if usuario == "" or clave == "":
             wx.MessageBox(u'Debe ingresar sus datos (usuario/clave)...')
-            self.txt_usuario.SetEditable(True)
-            self.txt_clave.SetEditable(True)
+            self.sBar.SetStatusText('')
+            self.txt_usuario.Enable()
+            self.txt_clave.Enable()
             return False
+        self.boton.Disable()
         servidor = 'http://beta.plaxed.com'
-        self.Conectar(servidor, usuario, clave)
-        if self.Validado:
-            self.usuario = usuario
-            self.clave = clave
-            self.servidor = servidor
-            log.debug('Accesando a Interfaz Principal')
-            frmMain = cFrame(self, "Plaxed Desktop (Demo)", self.servidor, self.usuario, self.clave)
-        else:
-            wx.MessageBox(u'Error de autenticación...', u'Información')
-            self.txt_usuario.SetEditable(True)
-            self.txt_clave.SetEditable(True)
+        self.usuario = usuario
+        self.clave = clave
+        self.servidor = servidor
+        self.PlayLoader()
+        Publisher().subscribe(self.LoginCorrecto, "LoginAceptado")
+        Publisher().subscribe(self.LoginFallido, "LoginRechazado")
+        self.sBar.SetStatusText('Validando credenciales...')
+        self.t = HiloValidar(self, self.servidor, self.usuario, self.clave)
+    
+    def LoginCorrecto(self, msj):
+        log.debug('Accesando a Interfaz Principal')
+        self.sBar.SetStatusText(u'Cargando Aplicación...')
+        frmMain = InterfazPrincipal(self, "Plaxed Desktop (Demo)", self.servidor, self.usuario, self.clave)
+    
+    def LoginFallido(self, msj):
+        log.debug('Error de Autenticacion')
+        self.StopLoader()
+        self.sBar.SetStatusText(u'Error de Autenticación...')
+        self.txt_usuario.Enable()
+        self.txt_clave.Enable()
+        self.txt_usuario.SetFocus()    
+        self.boton.Enable()
 
     def __del__(self):
         try:
             frmMain.Destroy()
         except:
             pass
+
+class HiloValidar(threading.Thread):
+    servidor = ''
+    usuario = ''
+    clave = ''
+    parent = None
+    def __init__(self, parent, servidor, usuario, clave):
+        threading.Thread.__init__(self)
+        self.parent = parent
+        self.servidor=servidor
+        self.clave=clave
+        self.usuario=usuario
+        self.start()
+        
+    def run(self):
+        self.red = statusNet(self.servidor, self.usuario, self.clave)
+        if self.red.estaConectado():
+            #self.parent.LoginCorrecto()
+            wx.CallAfter(Publisher().sendMessage, "LoginAceptado", "Thread finished!")
+            #pass
+        else:
+            #self.parent.LoginFallido()
+            #pass
+            wx.CallAfter(Publisher().sendMessage, "LoginRechazado", "Thread finished!")
+        
+        
 
 
 class PlaxedApp(wx.App):

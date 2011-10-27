@@ -1,4 +1,4 @@
-# -*- coding: utf-8 *-*
+﻿# -*- coding: utf-8 *-*
 
 
 def str_utf8(texto):

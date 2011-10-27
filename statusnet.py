@@ -1,4 +1,4 @@
-# -*- coding: utf-8 *-*
+﻿# -*- coding: utf-8 *-*
 import json
 import urllib2
 from urllib import urlencode
