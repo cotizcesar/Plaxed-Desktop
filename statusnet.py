@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 *-*
+# -*- coding: utf-8 *-*
 import json
 import urllib2
 from urllib import urlencode
@@ -9,9 +9,9 @@ logging.basicConfig()
 log = logging.getLogger('StatusNET')
 log.setLevel(logging.DEBUG)
 
+
 class statusNet():
 
-    #Variables Globales
     var_conectado = False
     usuario = ''
     clave = ''
@@ -79,7 +79,7 @@ class statusNet():
         miTL = json.loads(leido)
         return miTL
 
-    def TimeLineUser(self): #Esto hay que ARREGLARLO
+    def TimeLineUser(self):  # Esto hay que ARREGLARLO
         open = urllib2.urlopen(self.apibase + '/statuses/user_timeline.json')
         leido = open.read()
         miTL = json.loads(leido)

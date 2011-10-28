@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 *-*
+# -*- coding: utf-8 *-*
 import wx
 import wx.html
 import wx.animate
@@ -19,6 +19,7 @@ logging.basicConfig()
 log = logging.getLogger('GUI')
 log.setLevel(logging.DEBUG)
 
+
 class InterfazPrincipal(wx.Frame):
     cols = []
     #
@@ -38,9 +39,9 @@ class InterfazPrincipal(wx.Frame):
     servidor = ''
     intervaloTL = 15
     txtDescripcion = ''
-    me = None #Variable con datos del usuario, no implementada aun
+    me = None  # Variable con datos del usuario, no implementada aun
     primeraCargaImg = True
-    #
+
     def __init__(self, parent, titulo, servidor, usuario, clave):
         self.parent = parent
         self.usuario = usuario
@@ -76,7 +77,6 @@ class InterfazPrincipal(wx.Frame):
         texto = self.txt_estado.GetValue()
         texto = texto.encode('utf8')
         texto = texto.strip()
-        #texto = ''
         if texto != '':
             res = self.red.Publicar(texto)
             if res != "{Error}":
@@ -231,7 +231,7 @@ class InterfazPrincipal(wx.Frame):
                 log.debug("Reiniciando timer a %s segundos", str(self.intervaloTL))
                 self.timer = threading.Timer(self.intervaloTL, self.Actualizar)
             self.timer.start()
-            #La siguiente linea especifica que de ahora en adelante no es la primera carga de imagenes
+            #
             if self.primeraCargaImg:
                 self.primeraCargaImg = False
 
@@ -240,8 +240,6 @@ class InterfazPrincipal(wx.Frame):
         ancho = tamano[0] + 100
         texto = wordwrap(self.txtDescripcion, ancho, wx.ClientDC(self))
         self.lblDescripcion.SetLabel(texto)
-        #log.debug(texto)
-        #log.debug('Ancho: ' + str(ancho))
         event.Skip()
 
     def ConfigurarVentana(self):
@@ -251,10 +249,6 @@ class InterfazPrincipal(wx.Frame):
         self.SetMinSize((400, 500))
 
         self.panel = wx.Panel(self)
-
-        #self.toolBar = self.CreateToolBar( wx.TB_HORIZONTAL, wx.ID_ANY )
-        #self.toolBar.AddLabelTool(wx.ID_ANY, u"Inicio", wx.Bitmap( u"img/home.png", wx.BITMAP_TYPE_ANY ))
-        #self.toolBar.Realize()
 
         #Configurando la fila del perfil de usuario
         self.h_sizerPerfil = wx.BoxSizer(wx.HORIZONTAL)
@@ -275,9 +269,7 @@ class InterfazPrincipal(wx.Frame):
         usr_descripcion = ''
         self.lblDescripcion = wx.StaticText(self.panel, wx.ID_ANY, usr_descripcion, wx.DefaultPosition, wx.DefaultSize, 0 )
         self.lblDescripcion.SetFont( wx.Font(7, 70, 90, wx.NORMAL, False, wx.EmptyString ) )
-        #self.lblDescripcion.Wrap(1)
-        #self.lblDescripcion.Wrap(320)
-        #
+
         self.v_sizerInfo.Add(self.lblUsuario, 0, wx.TOP|wx.LEFT, 5 )
         self.v_sizerInfo.Add(self.lblDescripcion, 1, wx.EXPAND|wx.BOTTOM|wx.LEFT, 5 )
 
@@ -320,13 +312,12 @@ class InterfazPrincipal(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.CambioLinea, self.btnInicio)
         self.Bind(wx.EVT_BUTTON, self.CambioLinea, self.btnRespuestas)
         self.Bind(wx.EVT_BUTTON, self.CambioLinea, self.btnFavoritos)
-
-
+        #
         self.h_sizer2 = wx.BoxSizer(wx.HORIZONTAL)
-
+        #
         self.cols.append(self.NuevaColumna('tl_home'))
         self.v_sizer = wx.BoxSizer(wx.VERTICAL)
-
+        #
         #Se agregan los Sizers horizontales al Sizer Vertical Principal
         self.v_sizer.Add(self.h_sizerPerfil, 0, wx.EXPAND|wx.ALL, 0)
         self.v_sizer.Add(self.h_sizer1, 0, wx.EXPAND|wx.ALL, 0)
@@ -443,7 +434,6 @@ class PlaxedLogin(wx.Frame):
         self.lbl_usuario.Wrap( -1 )
         self.lbl_clave = wx.StaticText(self.panel, wx.ID_ANY, u"Clave:", wx.DefaultPosition, wx.DefaultSize, 0 )
         self.lbl_clave.Wrap( -1 )
-        #bSizer4.Add( self.m_staticText1, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
 
         self.bsizer.Add(self.imagen, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 30)
         self.bsizer.Add(self.lbl_usuario, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 3)
@@ -458,8 +448,8 @@ class PlaxedLogin(wx.Frame):
         self.bsizer.Add(self.ag, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 0)
         # clears the background
         self.ag.GetPlayer().UseBackgroundColour(False)
-        
-        
+
+
         #self.SetSizer(self.bsizer)
         self.panel.SetSizer(self.bsizer)
         self.Bind(wx.EVT_BUTTON, self.Entrar, self.boton)
@@ -470,7 +460,6 @@ class PlaxedLogin(wx.Frame):
 
     def Conectar(self, servidor, usuario, clave):
         log.debug('Verificando Sesion')
-        #self.PlayLoader() #Esto deberia ser en un hilo
         self.red = statusNet(servidor, usuario, clave)
         if self.red.estaConectado():
             log.debug('Credenciales Validas')
@@ -480,7 +469,7 @@ class PlaxedLogin(wx.Frame):
 
     def PlayLoader(self):
         self.ag.Play()
-    
+
     def StopLoader(self):
         self.ag.Stop()
 
@@ -509,19 +498,19 @@ class PlaxedLogin(wx.Frame):
         Publisher().subscribe(self.LoginFallido, "LoginRechazado")
         self.sBar.SetStatusText('Validando credenciales...')
         self.t = HiloValidar(self, self.servidor, self.usuario, self.clave)
-    
+
     def LoginCorrecto(self, msj):
         log.debug('Accesando a Interfaz Principal')
         self.sBar.SetStatusText(u'Cargando Aplicación...')
         frmMain = InterfazPrincipal(self, "Plaxed Desktop (Demo)", self.servidor, self.usuario, self.clave)
-    
+
     def LoginFallido(self, msj):
         log.debug('Error de Autenticacion')
         self.StopLoader()
         self.sBar.SetStatusText(u'Error de Autenticación...')
         self.txt_usuario.Enable()
         self.txt_clave.Enable()
-        self.txt_usuario.SetFocus()    
+        self.txt_usuario.SetFocus()
         self.boton.Enable()
 
     def __del__(self):
@@ -542,15 +531,15 @@ class HiloValidar(threading.Thread):
         self.clave=clave
         self.usuario=usuario
         self.start()
-        
+
     def run(self):
         self.red = statusNet(self.servidor, self.usuario, self.clave)
         if self.red.estaConectado():
-            wx.CallAfter(Publisher().sendMessage, "LoginAceptado", "Thread finished!")
+            wx.CallAfter(Publisher().sendMessage, "LoginAceptado", "Final de Thread")
         else:
-            wx.CallAfter(Publisher().sendMessage, "LoginRechazado", "Thread finished!")
-        
-        
+            wx.CallAfter(Publisher().sendMessage, "LoginRechazado", "Final de Thread")
+
+
 
 
 class PlaxedApp(wx.App):
