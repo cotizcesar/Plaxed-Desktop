@@ -253,8 +253,8 @@ class InterfazPrincipal(wx.Frame):
         #Configurando la fila del perfil de usuario
         self.h_sizerPerfil = wx.BoxSizer(wx.HORIZONTAL)
         ruta_img = self.red.miPerfilAttr('profile_image_url')
-        ruta_img_local = self.RutaOnlineToLocal(ruta_img)
         self.DescargarAvatar(ruta_img)
+        ruta_img_local = self.RutaOnlineToLocal(ruta_img)
         self.miImagen = wx.StaticBitmap(self.panel, wx.ID_ANY, wx.Bitmap(ruta_img_local, wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.h_sizerPerfil.Add(self.miImagen, 0, wx.TOP|wx.LEFT|wx.RIGHT, 5 )
 
