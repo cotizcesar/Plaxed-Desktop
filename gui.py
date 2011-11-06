@@ -21,19 +21,20 @@ log.setLevel(logging.DEBUG)
 
 
 class InterfazPrincipal(wx.Frame):
+
+    tls = ['tl_home','tl_public','replies','favorites','message']
     cols = []
-    #
-    ultimo = 0
+    ultimo = []
+    cols_vacia = []
+    tl_actual = ''
+    indiceActual = 0
     red = None
-    txt = ''
+    txt = []
     timer = None  # El timer de actualizar
     dir_perfiles = './perfiles/'
     dir_usuario = ''
     dir_imagenes = ''
     app_dir_img = './img/'
-    color_tab_1 = "#FFFFFF"
-    color_tab_2 = "#E6F8E0"
-    color_tab = ""
     usuario = ''
     clave = ''
     servidor = ''
@@ -88,19 +89,34 @@ class InterfazPrincipal(wx.Frame):
         else:
             wx.MessageBox('Debe ingresar un mensaje')
 
-    def RutaOnlineToLocal(self, ruta):
-        img_arr = ruta.split("/")
-        img_nombre = img_arr[len(img_arr) - 1]
-        if (os.path.isfile(self.dir_imagenes + img_nombre)):
-            img_ruta_local = self.dir_imagenes + img_nombre
-        else:
-            img_ruta_local = self.app_dir_img + 'default.png'
-        return img_ruta_local
+
+    def InnerHTML(self, txt):
+        log.debug("Inyectando HTML")
+        self.cols[0].SetPage(txt)
+        log.debug("Finalizando Inyeccion HTML")
+
+    def ActualizaBarraEstado(self):
+        origen = self.cols[0].GetOrigen()
+        Lugar = 'No definido'
+        if origen == 'tl_home':
+            Lugar = 'Inicio'
+        if origen == 'tl_public':
+            Lugar = u'Público'
+        if origen == 'replies':
+            Lugar = 'Respuestas'
+        if origen == 'favorites':
+            Lugar = 'Favoritos'
+        self.sBar.SetFields((Lugar,'Otra Info...'))
 
     def DescargarAvatar(self, ruta_img):
         tmp = ruta_img.split("/")
         img_nombre = tmp[len(tmp) - 1]
-        img_ruta = "/avatar/" + img_nombre
+        #
+        carpetas=''
+        for i in range(3,len(tmp)-1):
+            carpetas = carpetas + '/' + tmp[i]
+        carpetas = carpetas + '/'
+        img_ruta = carpetas + img_nombre
         img_ruta_local = self.dir_imagenes + img_nombre
         tmp_serv = self.red.servidor.split("//")
         serv = "www." + tmp_serv[1]
@@ -127,113 +143,33 @@ class InterfazPrincipal(wx.Frame):
         else:
             log.debug('Ya existe la imagen')
 
-    def BorrarImgAnterior(self, idusuario):
-        ficheros = os.listdir(self.dir_imagenes)
-        for nombreA in ficheros:
-            if (re.search('^'+ idusuario +'-', nombreA)):
-                os.remove(self.dir_imagenes + nombreA)
-                log.debug('Se borro la imagen anterior')
-
-    def InnerHTML(self, txt):
-        log.debug("Inyectando HTML")
-        self.cols[0].SetPage(txt)
-        log.debug("Finalizando Inyeccion HTML")
-
-    def ActualizaBarraEstado(self):
-        origen = self.cols[0].GetOrigen()
-        Lugar = 'No definido'
-        if origen == 'tl_home':
-            Lugar = 'Inicio'
-        if origen == 'tl_public':
-            Lugar = u'Público'
-        if origen == 'replies':
-            Lugar = 'Respuestas'
-        if origen == 'favorites':
-            Lugar = 'Favoritos'
-        self.sBar.SetFields((Lugar,'Otra Info...'))
+    def RutaOnlineToLocal(self, ruta):
+        img_arr = ruta.split("/")
+        img_nombre = img_arr[len(img_arr) - 1]
+        if (os.path.isfile(self.dir_imagenes + img_nombre)):
+            img_ruta_local = self.dir_imagenes + img_nombre
+        else:
+            img_ruta_local = self.app_dir_img + 'default.png'
+        return img_ruta_local
 
     def Actualizar(self):
         self.ActualizaBarraEstado()
-        log.debug("Intentando Actualizar " + self.cols[0].GetOrigen())
-        if self.red.estaConectado():
-            log.debug("Solicitando Datos del Servidor")
-            if self.cols[0].origen == 'tl_home':
-                mitl = self.red.TimeLineHome(self.ultimo)
-            if self.cols[0].origen == 'tl_public':
-                mitl = self.red.TimeLinePublic(self.ultimo)
-            if self.cols[0].origen == 'replies':
-                mitl = self.red.Respuestas(self.ultimo)
-            if self.cols[0].origen == 'favorites':
-                mitl = self.red.Favoritos(self.ultimo)
-            tmp = ''
-            ultimo = 0
-            cont = 0
+        self.respuestaTL = HiloTimeLine(self, self.servidor, self.usuario, self.clave,self.cols[0].GetOrigen(), self.primeraCargaImg)
+        log.debug("Solicitando Actualiacion de: " + self.cols[0].GetOrigen())
 
-            if len(mitl) > 0:
-                log.debug("Se recibieron mensajes nuevos")
-                log.debug("Parseando los datos")
-                #tmp = tmp + "<hr size=\"2\">"
-                for tl in mitl:
-                    if self.color_tab != self.color_tab_1:
-                        self.color_tab = self.color_tab_1
-                    else:
-                        self.color_tab = self.color_tab_2
-                    #self.color_tab = '#FFFFFF' #BORRAR ESTO ############
-                    cont = cont + 1
-                    self.DescargarAvatar(tl['user']['profile_image_url'])
-                    img_tmp = tl['user']['profile_image_url']
-                    img_arr = img_tmp.split("/")
-                    img_nombre = img_arr[len(img_arr) - 1]
-                    if (os.path.isfile(self.dir_imagenes + img_nombre)):
-                        img_ruta_local = self.dir_imagenes + img_nombre
-                    else:
-                        img_ruta_local = self.app_dir_img + 'default.png'
-                    tmp = tmp + '<table bgcolor="' + self.color_tab + '" width="100%" border="0"><tr><td width="48" valign="top"><img align="left" src="' + img_ruta_local + '"></td><td valign="top">'
-                    tmp = tmp + '<font size="2"><b>' + tl['user']['screen_name'] + '</b><br>'
-                    #fecha = datetime.datetime.strptime(tl['created_at'], "%A %b %d %H:%M:%S %Z %Y")
-                    #ya = datetime.date.today()
-                    #f1_d = int(fecha.strftime('%d'))
-                    #f1_m = int(fecha.strftime('%m'))
-                    #f1_Y = int(fecha.strftime('%Y'))
-                    #f2_d = int(ya.strftime('%d'))
-                    #f2_m = int(ya.strftime('%m'))
-                    #f2_Y = int(ya.strftime('%Y'))
-                    #tm = f2_m - f1_m
-                    strfecha = ""
-                    #strfecha = "%s minutos" % (str(tm))
-                    if tl['in_reply_to_user_id'] != None:
-                        en_respuesta = "En respuesta a <i>" + tl['in_reply_to_screen_name'] + "</i>"
-                    else:
-                        en_respuesta = ''
-                    fila_info = '<br><font size="1" color="gray">%s</font>' % en_respuesta
-                    tmp = u"%s %s</font>%s</td></tr></table>" % (tmp, tl['text'],fila_info) #text o statusnet_html
-                    if cont < len(mitl):
-                        #tmp = tmp + "<br><br>"
-                        pass
-                    if ultimo == 0:
-                        ultimo = tl['id']
-                        self.ultimo = ultimo
-                log.debug("Finalizando descarga de mensajes")
-                self.txt = tmp + self.txt
-                self.InnerHTML(self.txt)
-            else:
-                log.debug("No existen mensajes nuevos")
+    def ActualizarTimer(self):
+        #Intentando crear timer
+        if self.timer == None:
+            self.timer = threading.Timer(self.intervaloTL, self.Actualizar)
+            log.debug("Creando timer a %s segundos", str(self.intervaloTL))
+        else:
+            log.debug("Deteniendo el timer")
+            self.timer.cancel()
+            self.timer = None
+            log.debug("Reiniciando timer a %s segundos", str(self.intervaloTL))
+        self.timer = threading.Timer(self.intervaloTL, self.Actualizar)
+        self.timer.start()
 
-            log.debug("ID de ultimo mensaje recibido: %s" % str(self.ultimo))
-            #Intentando crear timer
-            if self.timer == None:
-                self.timer = threading.Timer(self.intervaloTL, self.Actualizar)
-                log.debug("Creando timer a %s segundos", str(self.intervaloTL))
-            else:
-                log.debug("Deteniendo el timer")
-                self.timer.cancel()
-                self.timer = None
-                log.debug("Reiniciando timer a %s segundos", str(self.intervaloTL))
-                self.timer = threading.Timer(self.intervaloTL, self.Actualizar)
-            self.timer.start()
-            #
-            if self.primeraCargaImg:
-                self.primeraCargaImg = False
 
     def RedimensionVentana(self, event):
         tamano = self.GetSize()
@@ -242,7 +178,29 @@ class InterfazPrincipal(wx.Frame):
         self.lblDescripcion.SetLabel(texto)
         event.Skip()
 
+    def TL_Mensajes(self, msj):
+        if self.primeraCargaImg:
+            self.primeraCargaImg = False
+        self.ultimo[self.indiceActual] = self.respuestaTL.ultimo
+        if self.cols_vacia[self.indiceActual] == True:
+            self.txt[self.indiceActual] = self.respuestaTL.txt
+        else:
+            self.txt[self.indiceActual] = self.respuestaTL.txt + self.txt[self.indiceActual]
+        self.cols_vacia[self.indiceActual] = False
+        self.InnerHTML(self.txt[self.indiceActual])
+
+        self.ActualizarTimer()
+
+    def TL_Vacio(self, msj):
+        self.ActualizarTimer()
+
     def ConfigurarVentana(self):
+        Publisher().subscribe(self.TL_Mensajes, "TL_Mensajes")
+        Publisher().subscribe(self.TL_Vacio, "TL_Vacio")
+        for i in range(1, len(self.tls)):
+            self.txt.append('')
+            self.ultimo.append(0)
+            self.cols_vacia.append(True)
         log.debug('Configurando Ventana')
         icono = wx.Icon('img/iconosolo16.png', wx.BITMAP_TYPE_PNG)
         self.SetIcon(icono)
@@ -315,7 +273,8 @@ class InterfazPrincipal(wx.Frame):
         #
         self.h_sizer2 = wx.BoxSizer(wx.HORIZONTAL)
         #
-        self.cols.append(self.NuevaColumna('tl_home'))
+        self.tl_actual = self.tls[0]
+        self.cols.append(self.NuevaColumna(self.tl_actual))
         self.v_sizer = wx.BoxSizer(wx.VERTICAL)
         #
         #Se agregan los Sizers horizontales al Sizer Vertical Principal
@@ -334,28 +293,33 @@ class InterfazPrincipal(wx.Frame):
 
     def CambioLinea(self, event):
         obj = event.GetEventObject()
-        origen_ant = self.cols[0].GetOrigen()
-        if obj == self.btnInicio:
-            if origen_ant == 'tl_home':
-                return False
-            self.cols[0].SetOrigen('tl_home')
-        if obj == self.btnPublico:
-            if origen_ant == 'tl_public':
-                return False
-            self.cols[0].SetOrigen('tl_public')
-        if obj == self.btnRespuestas:
-            if origen_ant == 'replies':
-                return False
-            self.cols[0].SetOrigen('replies')
-        if obj == self.btnFavoritos:
-            if origen_ant == 'favorites':
-                return False
-            self.cols[0].SetOrigen('favorites')
-        log.debug('Cambio de Linea de Tiempo')
-        self.txt = ''
-        self.ultimo = 0
+        indiceViejo = self.tls.index(self.cols[0].GetOrigen())
 
-        self.InnerHTML(self.txt)
+        if obj == self.btnInicio:
+            indiceNuevo = self.tls.index('tl_home')
+
+        if obj == self.btnPublico:
+            indiceNuevo = self.tls.index('tl_public')
+
+        if obj == self.btnRespuestas:
+            indiceNuevo = self.tls.index('replies')
+
+        if obj == self.btnFavoritos:
+            indiceNuevo = self.tls.index('favorites')
+
+        if indiceNuevo == indiceViejo:
+            log.debug('Seleccionando mismo Tl. No se carga')
+            return False
+        self.cols[0].SetOrigen(self.tls[indiceNuevo])
+        self.indiceActual = indiceNuevo
+        log.debug('Cambio de Linea de Tiempo')
+        #self.txt[0] = ''
+        #self.ultimo = 0
+        if self.cols_vacia[self.indiceActual] == True:
+            self.InnerHTML('<center>Cargando...</center>')
+        else:
+            self.InnerHTML(self.txt[self.indiceActual])
+
         try:
             self.timer.cancel()
             self.timer = None
@@ -518,6 +482,143 @@ class PlaxedLogin(wx.Frame):
             frmMain.Destroy()
         except:
             pass
+
+class HiloTimeLine(threading.Thread):
+    servidor = ''
+    usuario = ''
+    clave = ''
+    parent = None
+    txt = ''
+    ultimo = 0
+    time_line = ''
+    color_tab_1 = "#FFFFFF"
+    color_tab_2 = "#E6F8E0"
+    color_tab = ""
+    dir_perfiles = './perfiles/'
+    dir_usuario = ''
+    dir_imagenes = ''
+    app_dir_img = './img/'
+    def __init__(self, parent, servidor, usuario, clave, time_line, primera_carga):
+        threading.Thread.__init__(self)
+        self.parent = parent
+        self.servidor = servidor
+        self.clave = clave
+        self.usuario = usuario
+        self.time_line = time_line
+        self.primera_carga = primera_carga
+        self.ultimo=self.parent.ultimo
+        self.start()
+
+    def run(self):
+        self.red = statusNet(self.servidor, self.usuario, self.clave)
+        if self.red.estaConectado():
+            self.dir_usuario = self.dir_perfiles + str(self.red.miPerfilAttr('id'))
+            self.dir_imagenes = self.dir_usuario + '/imagenes/'
+            log.debug("Solicitando Datos del Servidor")
+            if self.time_line == 'tl_home':
+                mitl = self.red.TimeLineHome(self.ultimo)
+            if self.time_line == 'tl_public':
+                mitl = self.red.TimeLinePublic(self.ultimo)
+            if self.time_line == 'replies':
+                mitl = self.red.Respuestas(self.ultimo)
+            if self.time_line == 'favorites':
+                mitl = self.red.Favoritos(self.ultimo)
+            tmp = ''
+            ultimo = 0
+            cont = 0
+
+            if len(mitl) > 0:
+                log.debug("Se recibieron mensajes nuevos")
+                log.debug("Parseando los datos")
+                for tl in mitl:
+                    if self.color_tab != self.color_tab_1:
+                        self.color_tab = self.color_tab_1
+                    else:
+                        self.color_tab = self.color_tab_2
+                    #self.color_tab = '#FFFFFF' #BORRAR ESTO ############
+                    cont = cont + 1
+                    self.DescargarAvatar(tl['user']['profile_image_url'])
+                    img_tmp = tl['user']['profile_image_url']
+                    img_arr = img_tmp.split("/")
+                    img_nombre = img_arr[len(img_arr) - 1]
+                    if (os.path.isfile(self.dir_imagenes + img_nombre)):
+                        img_ruta_local = self.dir_imagenes + img_nombre
+                    else:
+                        img_ruta_local = self.app_dir_img + 'default.png'
+                    tmp = tmp + '<table bgcolor="' + self.color_tab + '" width="100%" border="0"><tr><td width="48" valign="top"><img align="left" src="' + img_ruta_local + '"></td><td valign="top">'
+                    tmp = tmp + '<font size="2"><b>' + tl['user']['screen_name'] + '</b><br>'
+                    if tl['in_reply_to_user_id'] != None:
+                        en_respuesta = "En respuesta a <i>" + tl['in_reply_to_screen_name'] + "</i>"
+                    else:
+                        en_respuesta = ''
+                    fila_info = '<br><font size="1" color="gray">%s</font>' % en_respuesta
+                    tmp = u"%s %s</font>%s</td></tr></table>" % (tmp, tl['text'],fila_info) #text o statusnet_html
+                    if cont < len(mitl):
+                        #tmp = tmp + "<br><br>"
+                        pass
+                    if ultimo == 0:
+                        ultimo = tl['id']
+                        self.ultimo = ultimo
+                log.debug('Ultimo ID: ' + str(self.ultimo))
+                log.debug("Finalizando descarga de mensajes")
+                self.txt = tmp + self.txt
+                wx.CallAfter(Publisher().sendMessage, "TL_Mensajes", "Final de Thread")
+            else:
+                wx.CallAfter(Publisher().sendMessage, "TL_Vacio", "Final de Thread")
+                log.debug("No existen mensajes nuevos")
+        else:
+            wx.CallAfter(Publisher().sendMessage, "Desconectado", "Final de Thread")
+
+    def RutaOnlineToLocal(self, ruta):
+        img_arr = ruta.split("/")
+        img_nombre = img_arr[len(img_arr) - 1]
+        if (os.path.isfile(self.dir_imagenes + img_nombre)):
+            img_ruta_local = self.dir_imagenes + img_nombre
+        else:
+            img_ruta_local = self.app_dir_img + 'default.png'
+        return img_ruta_local
+
+    def DescargarAvatar(self, ruta_img):
+        tmp = ruta_img.split("/")
+        img_nombre = tmp[len(tmp) - 1]
+        #
+        carpetas=''
+        for i in range(3,len(tmp)-1):
+            carpetas = carpetas + '/' + tmp[i]
+        carpetas = carpetas + '/'
+        img_ruta = carpetas + img_nombre
+        img_ruta_local = self.dir_imagenes + img_nombre
+        tmp_serv = self.red.servidor.split("//")
+        serv = "www." + tmp_serv[1]
+        tmp2 = img_nombre.split('-')
+        idu = tmp2[0] #esto es el ID del usuario, antes del primer guion
+        if (not os.path.isfile(img_ruta_local)):
+            if self.primera_carga:
+                log.debug('Intentando eliminar la imagen antigua')
+                try:
+                    self.BorrarImgAnterior(idu)
+                except:
+                    log.debug('No se encontro la imagen o no se pudo borrar')
+            # Descargando nueva imagen
+            try:
+                con = httplib.HTTPConnection(serv)
+                con.request("GET", img_ruta)
+                r = con.getresponse()
+                archivo = file(img_ruta_local, 'wb')
+                archivo.write(r.read())
+                archivo.close()
+                log.debug("Imagen descargada")
+            except:
+                log.debug("Error al descargar imagen")
+        else:
+            log.debug('Ya existe la imagen')
+
+    def BorrarImgAnterior(self, idusuario):
+        ficheros = os.listdir(self.dir_imagenes)
+        for nombreA in ficheros:
+            if (re.search('^'+ idusuario +'-', nombreA)):
+                os.remove(self.dir_imagenes + nombreA)
+                log.debug('Se borro la imagen anterior')
 
 class HiloValidar(threading.Thread):
     servidor = ''
