@@ -445,8 +445,7 @@ class PlaxedLogin(wx.Frame):
         clave = clave.strip()
         #
         if usuario == "" or clave == "":
-            wx.MessageBox(u'Debe ingresar sus datos (usuario/clave)...')
-            self.sBar.SetStatusText('')
+            self.sBar.SetStatusText(u'Debe ingresar sus usuario y clave...')
             self.txt_usuario.Enable()
             self.txt_clave.Enable()
             return False
