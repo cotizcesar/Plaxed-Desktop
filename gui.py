@@ -79,13 +79,9 @@ class InterfazPrincipal(wx.Frame):
         texto = texto.encode('utf8')
         texto = texto.strip()
         if texto != '':
-            res = self.red.Publicar(texto)
-            if res != "{Error}":
-                self.txt_estado.Clear()
-            else:
-                #Aqui deberia enviarse un mensaje de envio fallido
-                wx.MessageBox(u'Su mensaje no pudo ser enviado =(', 'Aviso')
-                pass
+			self.txt_estado.Disable()
+			self.btnAceptar.Disable()
+			self.respuestaEnvio = HiloEnviarMensaje(self, self.servidor, self.usuario, self.clave, texto)            
         else:
             wx.MessageBox('Debe ingresar un mensaje')
 
@@ -106,7 +102,7 @@ class InterfazPrincipal(wx.Frame):
             Lugar = 'Respuestas'
         if origen == 'favorites':
             Lugar = 'Favoritos'
-        self.sBar.SetFields((Lugar,'Otra Info...'))
+        self.sBar.SetFields((Lugar,'www.plaxed.com'))
 
     def DescargarAvatar(self, ruta_img):
         tmp = ruta_img.split("/")
@@ -193,10 +189,28 @@ class InterfazPrincipal(wx.Frame):
 
     def TL_Vacio(self, msj):
         self.ActualizarTimer()
+    
+    def MensajeEnviado(self, msj):
+		log.debug('Mensaje Enviado')
+		self.txt_estado.SetValue('')
+		self.txt_estado.Enable()
+		self.btnAceptar.Enable()
+    
+    def MensajeNoEnviado(self, msj):
+        log.debug('Mensaje No Enviado')
+        self.txt_estado.Enable()
+        self.btnAceptar.Enable()
+
+    def APP_Desconectado(self, msj):
+        log.debug('Aplicacion Desconectada')
 
     def ConfigurarVentana(self):
         Publisher().subscribe(self.TL_Mensajes, "TL_Mensajes")
         Publisher().subscribe(self.TL_Vacio, "TL_Vacio")
+        Publisher().subscribe(self.MensajeEnviado, "MensajeEnviado")
+        Publisher().subscribe(self.MensajeNoEnviado, "MensajeNoEnviado")
+        Publisher().subscribe(self.APP_Desconectado, "APP_Desconectado")
+        #
         for i in range(1, len(self.tls)):
             self.txt.append('')
             self.ultimo.append(0)
@@ -235,13 +249,13 @@ class InterfazPrincipal(wx.Frame):
 
         #configurando la fila de estado
         self.h_sizer1 = wx.BoxSizer(wx.HORIZONTAL)
-        self.txt_estado = wx.TextCtrl(self.panel, wx.ID_ANY, '', (-1, -1), (-1, 50), style=wx.TE_MULTILINE|wx.TE_NO_VSCROLL)
+        self.txt_estado = wx.TextCtrl(self.panel, wx.ID_ANY, '', (-1, -1), (-1, 50), style=wx.TE_MULTILINE|wx.TE_NO_VSCROLL|wx.TE_PROCESS_ENTER)
         self.h_sizer1.Add(self.txt_estado, 1, wx.ALL|wx.EXPAND, 5)
-        self.btn_aceptar = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/aceptar.png", wx.BITMAP_TYPE_ANY ), pos=wx.DefaultPosition, size=(40,25), style=wx.BU_AUTODRAW )
-        self.h_sizer1.Add(self.btn_aceptar, 0, wx.ALL, 5)
+        self.btnAceptar = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/aceptar.png", wx.BITMAP_TYPE_ANY ), pos=wx.DefaultPosition, size=(40,25), style=wx.BU_AUTODRAW )
+        self.h_sizer1.Add(self.btnAceptar, 0, wx.ALL, 5)
 
         #Configurando eventos
-        self.panel.Bind(wx.EVT_BUTTON, self.BotonEstado, self.btn_aceptar)
+        self.panel.Bind(wx.EVT_BUTTON, self.BotonEstado, self.btnAceptar)
         self.panel.Bind(wx.EVT_TEXT_ENTER, self.EnterEstado, self.txt_estado)
         self.Bind(wx.EVT_SIZE, self.RedimensionVentana)
 
@@ -565,7 +579,7 @@ class HiloTimeLine(threading.Thread):
                 wx.CallAfter(Publisher().sendMessage, "TL_Vacio", "Final de Thread")
                 log.debug("No existen mensajes nuevos")
         else:
-            wx.CallAfter(Publisher().sendMessage, "Desconectado", "Final de Thread")
+            wx.CallAfter(Publisher().sendMessage, "APP_Desconectado", "Final de Thread")
 
     def RutaOnlineToLocal(self, ruta):
         img_arr = ruta.split("/")
@@ -638,6 +652,32 @@ class HiloValidar(threading.Thread):
         else:
             wx.CallAfter(Publisher().sendMessage, "LoginRechazado", "Final de Thread")
 
+class HiloEnviarMensaje(threading.Thread):
+    servidor = ''
+    usuario = ''
+    clave = ''
+    parent = None
+    txt = ''
+    def __init__(self, parent, servidor, usuario, clave, txt):
+        threading.Thread.__init__(self)
+        self.parent = parent
+        self.servidor=servidor
+        self.clave=clave
+        self.usuario=usuario
+        self.txt = txt
+        self.start()
+
+    def run(self):
+        self.red = statusNet(self.servidor, self.usuario, self.clave)
+        if self.red.estaConectado():
+            res = self.red.Publicar(self.txt)
+            if res != "{Error}":
+                wx.CallAfter(Publisher().sendMessage, "MensajeEnviado", "Final de Thread")
+            else:
+                wx.CallAfter(Publisher().sendMessage, "MensajeNoEnviado", "Final de Thread")
+            
+        else:
+            wx.CallAfter(Publisher().sendMessage, "APP_Desconectado", "Final de Thread")
 
 
 
