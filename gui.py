@@ -311,8 +311,8 @@ class InterfazPrincipal(wx.Frame):
         self.cols[0].SetOrigen(self.tls[indiceNuevo])
         self.indiceActual = indiceNuevo
         log.debug('Cambio de Linea de Tiempo')
-        #self.txt[0] = ''
-        #self.ultimo = 0
+        #
+        self.InnerHTML('')
         if self.cols_vacia[self.indiceActual] == True:
             self.InnerHTML('<center>Cargando...</center>')
         else:
@@ -504,7 +504,8 @@ class HiloTimeLine(threading.Thread):
         self.usuario = usuario
         self.time_line = time_line
         self.primera_carga = primera_carga
-        self.ultimo=self.parent.ultimo
+        self.ultimo=self.parent.ultimo[self.parent.indiceActual]
+        log.debug('Ultimo ID Thread: ' + str(self.parent.ultimo[self.parent.indiceActual]));
         self.start()
 
     def run(self):
