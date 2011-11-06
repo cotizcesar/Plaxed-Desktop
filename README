@@ -19,5 +19,10 @@ Teóricamente, para ejecutar la aplicación solo se necesita lo siguiente:
 Aún no se han realizado pruebas en otras versiones de Python para detectar si algún módulo o función ha sufrido cambios.
 
 
+
+LICENCIA
+Esta aplicación tiene CopyLeft, y está licenciada bajo GPLv3.
+
+
 CONTACTO
 Si tienes alguna sugerencia o has encontrado un bug, puedes contactarme al correo jrcsdev@gmail.com
