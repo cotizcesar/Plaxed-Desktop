@@ -155,7 +155,7 @@ class InterfazPrincipal(wx.Frame):
     def Actualizar(self):
         self.ActualizaBarraEstado()
         self.respuestaTL = HiloTimeLine(self, self.servidor, self.usuario, self.clave,self.cols[0].GetOrigen(), self.primeraCargaImg)
-        log.debug("Solicitando Actualiacion de: " + self.cols[0].GetOrigen())
+        log.debug("Solicitando Actualizacion de: " + self.cols[0].GetOrigen())
 
     def ActualizarTimer(self):
         #Intentando crear timer
