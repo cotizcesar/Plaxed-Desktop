@@ -235,8 +235,6 @@ class InterfazPrincipal(wx.Frame):
 
         #configurando la fila de estado
         self.h_sizer1 = wx.BoxSizer(wx.HORIZONTAL)
-        #self.etiqueta = wx.StaticText(self.panel, wx.ID_ANY, 'Estado: ')
-        #self.h_sizer1.Add(self.etiqueta, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5)
         self.txt_estado = wx.TextCtrl(self.panel, wx.ID_ANY, '', (-1, -1), (-1, 50), style=wx.TE_MULTILINE|wx.TE_NO_VSCROLL)
         self.h_sizer1.Add(self.txt_estado, 1, wx.ALL|wx.EXPAND, 5)
         self.btn_aceptar = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/aceptar.png", wx.BITMAP_TYPE_ANY ), pos=wx.DefaultPosition, size=(40,25), style=wx.BU_AUTODRAW )
