@@ -35,7 +35,7 @@ class InterfazPrincipal(wx.Frame):
     dir_usuario = ''
     dir_imagenes = ''
     app_dir_img = './img/'
-    html_loader_tl = '<br><br><center><img src="img/loader_timeline.gif"></center>'
+    html_loader_tl = '<br><br><center><img src="img/loader_timeline_transparente2.gif"></center>'
     usuario = ''
     clave = ''
     servidor = ''
@@ -451,7 +451,7 @@ class PlaxedLogin(wx.Frame):
     serv = ''
     def __init__(self, parent):
         self.parent = parent
-        wx.Frame.__init__(self, None, wx.ID_ANY, 'Plaxed Desktop (Demo)', size=(320, 450))
+        wx.Frame.__init__(self, None, wx.ID_ANY, 'Plaxed Desktop (Pre-Alpha)', size=(320, 450))
         self.ConfigurarVentana()
 
     def ConfigurarVentana(self):
@@ -481,12 +481,12 @@ class PlaxedLogin(wx.Frame):
         self.bsizer.Add(self.txt_clave, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 3)
         self.bsizer.Add(self.boton, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 30)
 
-        #Agregar un Loader: Test()
-        self.ag_fname = "img/loader.gif"
+        #Agregar un Loader:
+        self.ag_fname = 'img/loader_timeline_transparente.gif'
         self.ag = wx.animate.GIFAnimationCtrl(self.panel, -1, self.ag_fname, pos=(-1, -1))
         self.bsizer.Add(self.ag, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 0)
         # clears the background
-        self.ag.GetPlayer().UseBackgroundColour(False)
+        self.ag.GetPlayer().UseBackgroundColour(True)
 
 
         #self.SetSizer(self.bsizer)
