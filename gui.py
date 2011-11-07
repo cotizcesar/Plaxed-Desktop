@@ -218,14 +218,34 @@ class InterfazPrincipal(wx.Frame):
             self.txt_estado.Enable()
             self.btnAceptar.Enable()
         if respuesta == "MensajeNoEnviado":
-            log.debug('****NO SE RECIBIERON MENSAJES DEL THREAD****')
             log.debug('Mensaje No Enviado')
             self.txt_estado.Enable()
             self.btnAceptar.Enable()
         if respuesta == "APP_Desconectado":
-            log.debug('Reintente el envio nuevamente')
+            log.debug('Reintente el envio')
             self.txt_estado.Enable()
             self.btnAceptar.Enable()
+
+    def HiloEnviarMensajeDirecto(self, msj):
+        respuesta = msj.data
+        log.debug('Respuesta del Hilo "Enviar Mensaje": ' + respuesta)
+        if respuesta == "TimeOut":
+            log.debug('Reintente el envio nuevamente')
+            self.vtnRespuesta.Bloquear(False)
+            wx.MessageBox(u'El servidor no respondió, intente de nuevo')
+        if respuesta == "MensajeEnviado":
+            log.debug('Mensaje Directo Enviado')
+            self.vtnRespuesta.Destroy()
+            self.Enable()
+            self.txt_estado.SetFocus()
+        if respuesta == "MensajeNoEnviado":
+            log.debug('Mensaje Directo No Enviado')
+            wx.MessageBox(u'El mensaje no se envió, intente de nuevo')
+            self.vtnRespuesta.Bloquear(False)
+        if respuesta == "APP_Desconectado":
+            log.debug('Reintente el envio')
+            wx.MessageBox(u'Aplicación Desconectada! Reintente el envío')
+            self.vtnRespuesta.Bloquear(False)
 
     def APP_Desconectado(self, msj):
         log.debug('Aplicacion Desconectada')
@@ -244,10 +264,7 @@ class InterfazPrincipal(wx.Frame):
         #
         arreglo1 = self.servidor.split('/')
         app_servidor = arreglo1[2]
-        #for parte in arreglo:
-        #    wx.MessageBox(str(parte))
 
-        #wx.MessageBox(tipo)
         if url_servidor != app_servidor:
             wx.LaunchDefaultBrowser(link)
 
@@ -267,14 +284,32 @@ class InterfazPrincipal(wx.Frame):
             wx.LaunchDefaultBrowser(link)
             #wx.MessageBox(u'Las URLs no están implementadas todavía')
             return False
-        #wx.MessageBox(url_servidor)
-        #wx.MessageBox(app_servidor)
 
+        if url_tipo == 'notice':
+            accion = arreglo[4]
+            if accion == 'new':
+                usuario = arreglo[5]
+                id = arreglo[6]
+                parametro = usuario + ',' + id
+                #wx.MessageBox('Respuesta a usuario %s, Id del status %s' % (usuario, id))
+                self.vtnRespuesta = VentanaResponder(self, parametro)
+                self.vtnRespuesta.Show(callback=self.VentanaRespuestaOk, cancelCallback=self.VentanaRespuestaCancel)
+            return False
+
+    def VentanaRespuestaOk(self, txt, idmensaje):
+        #wx.MessageBox('Se enviara el mensaje "%s" en respuesta al id = %s' % (txt, idmensaje))
+        #{Error}
+        self.respuestaEnvioDirecto = HiloEnviarMensaje(self, self.servidor, self.usuario, self.clave, txt, True, idmensaje)
+
+
+    def VentanaRespuestaCancel(self):
+        pass
 
     def ConfigurarVentana(self):
         Publisher().subscribe(self.TL_Mensajes, "TL_Mensajes")
         Publisher().subscribe(self.TL_Vacio, "TL_Vacio")
         Publisher().subscribe(self.HiloEnviarMensaje, "Hilo_Enviar_Mensaje")
+        Publisher().subscribe(self.HiloEnviarMensajeDirecto, "Hilo_Enviar_Mensaje_Directo")
         Publisher().subscribe(self.APP_Desconectado, "APP_Desconectado")
         Publisher().subscribe(self.LinkPresionado, "LinkPresionado")
         Publisher().subscribe(self.ReiniciaSolicitudTL, "TL_No_Recibido")
@@ -697,6 +732,8 @@ class HiloTimeLine(threading.Thread):
                         else:
                             en_respuesta = ''
                     fila_info = '<br><font size="1" color="gray">%s</font>' % en_respuesta
+                    if self.time_line!= 'messages':
+                        fila_info += ' <a href="http://beta.plaxed.com/notice/new/%s/%s">Responder</a>' % (tl[usuario1]['screen_name'], tl['id'])
                     if self.time_line == 'messages':
                         msj = tl['text']
                     else:
@@ -802,29 +839,101 @@ class HiloEnviarMensaje(threading.Thread):
     clave = ''
     parent = None
     txt = ''
-    def __init__(self, parent, servidor, usuario, clave, txt):
+    directo = False
+    idmensaje = True
+    def __init__(self, parent, servidor, usuario, clave, txt, directo=False, idmensaje=''):
         threading.Thread.__init__(self)
         self.parent = parent
         self.servidor=servidor
         self.clave=clave
         self.usuario=usuario
         self.txt = txt
+        self.directo = directo
+        self.idmensaje = idmensaje
         self.daemon = True
         self.start()
 
     def run(self):
         self.red = statusNet(self.servidor, self.usuario, self.clave)
         if self.red.estaConectado():
-            res = self.red.Publicar(self.txt)
-            if res == "{TimeOut}":
-                wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje", "TimeOut")
-            if res != "{Error}":
-                wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje", "MensajeEnviado")
+            if self.directo:
+                res = self.red.PublicarRespuesta(self.txt, self.idmensaje)
+                if res == "{TimeOut}":
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje_Directo", "TimeOut")
+                if res != "{Error}":
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje_Directo", "MensajeEnviado")
+                else:
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje_Directo", "MensajeNoEnviado")
             else:
-                wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje", "MensajeNoEnviado")
+                res = self.red.Publicar(self.txt)
+                if res == "{TimeOut}":
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje", "TimeOut")
+                if res != "{Error}":
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje", "MensajeEnviado")
+                else:
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje", "MensajeNoEnviado")
 
         else:
             wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje", "APP_Desconectado")
+
+class VentanaResponder(wx.Frame):
+
+    idmensaje = 0
+    def __init__(self, parent, destinatario):
+        wx.Frame.__init__(self, parent=parent, id=-1, title='Responder', size=(250,150), style=wx.FRAME_FLOAT_ON_PARENT | wx.CAPTION | wx.FRAME_TOOL_WINDOW | wx.SYSTEM_MENU| wx.CLOSE_BOX)
+        self.parent = parent
+        self.panel = wx.Panel(self, -1)
+        self.bz_vertical = wx.BoxSizer(wx.VERTICAL)
+        self.txtRespuesta = wx.TextCtrl(self.panel, wx.ID_ANY, '', (-1, -1), (-1, 50), style=wx.TE_MULTILINE|wx.TE_NO_VSCROLL|wx.TE_PROCESS_ENTER)
+        self.btnAceptar = wx.Button(self.panel, -1,'Enviar')
+        self.bz_vertical.Add(self.txtRespuesta, 1, wx.EXPAND, 5)
+        self.bz_vertical.Add(self.btnAceptar, 0, wx.ALL|wx.ALIGN_RIGHT, 5)
+
+        self.panel.SetSizer(self.bz_vertical)
+
+        self.btnAceptar.Bind(wx.EVT_BUTTON, self.OnOK)
+        self.destinatario = destinatario
+        self.ConfigurarVentana()
+
+    def ConfigurarVentana(self):
+        self.Bind(wx.EVT_CLOSE, self.CerrandoVentana)
+        datos = self.destinatario.split(',')
+        self.idmensaje = datos[1]
+        self.SetTitle('Reponder a ' + datos[0])
+
+    def Show(self, callback=None, cancelCallback=None):
+        self.callback = callback
+        self.cancelCallback = cancelCallback
+
+        self.CenterOnParent()
+        self.GetParent().Enable(False)
+        wx.Frame.Show(self)
+        self.Raise()
+        self.txtRespuesta.SetFocus()
+
+    def OnOK(self, event):
+        self.Bloquear(True)
+        texto = self.txtRespuesta.GetValue()
+        texto = texto.encode('utf8')
+        texto = texto.strip()
+        if texto == '':
+            wx.MessageBox('Debe ingresar un mensaje')
+        else:
+            self.callback(texto, self.idmensaje)
+
+    def Bloquear(self, bloquear):
+        if bloquear:
+            self.txtRespuesta.Disable()
+            self.btnAceptar.Disable()
+        else:
+            self.txtRespuesta.Enable()
+            self.btnAceptar.Enable()
+            self.txtRespuesta.SetFocus()
+
+
+    def CerrandoVentana(self, event):
+        self.GetParent().Enable(True)
+        event.Skip()
 
 
 

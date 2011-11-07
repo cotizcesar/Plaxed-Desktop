@@ -140,3 +140,14 @@ class statusNet():
             leido = "{Error}"
             log.debug('{Error} Envio Fallido')
         return leido
+
+    def PublicarRespuesta(self, txt, en_respuesta):
+        paquete = urlencode({'status': txt, 'source': self.app_origen, 'in_reply_to_status_id': en_respuesta})
+        try:
+            open = urllib2.urlopen(self.apibase + '/statuses/update.json?%s' % paquete, '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
+            leido = open.read()
+            log.debug('Enviado: ' + str(leido))
+        except:
+            leido = "{Error}"
+            log.debug('{Error} Envio Fallido')
+        return leido
