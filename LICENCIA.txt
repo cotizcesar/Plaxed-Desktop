@@ -1,0 +1,8 @@
+﻿PlaxedDesktop es una aplicación cliente para la Red Social Venezolana www.plaxed.com
+Copyright (C) 2011 Jesús Cabrera jrcsdev@gmail.com
+
+Este programa es software libre: Usted puede redistribuirlo y/o modificarlo bajo los términos de la Licencia Pública General de GNU tal como fue publicada por la Free Software Foundation, bien sea la versión de la Licencia o (si lo prefiere) cualquier versión posterior.
+
+Este programa es distribuido con la intención de que sea útil, pero SIN GARANTÍA ALGUNA; ni siquiera con la garantía implícita de COMERCIALIZACIÓN o IDONEIDAD PARA UN PROPÓSITO PARTICULAR. Véase la Licencia Pública General de GNU para más detalles.
+
+Usted debe haber recibido una copia de la Licencia Pública General de GNU junto a este programa. Si no es así, diríjase a http://www.gnu.org/licenses/
