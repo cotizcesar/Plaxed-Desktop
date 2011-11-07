@@ -1,12 +1,10 @@
 [Windows]
 
-Para ejecutar, doble click al archivo: PlaxedDesktop.bat
+Para ejecutar, doble click al archivo: plaxed.bat
 
 [Linux]
 
-En linux me dio flojera, pero se hace entrando a la carpeta y escribiendo:
-python __init__.py
+Para ejecutar, doble click al archivo: plaxed.sh
 
-(NOTA: esto tambien funciona en windows jaja)
 
-@jrcsdev
+Cualquier duda, contáctame al jrcsdev@gmail.com o síguente en twitter: @jrcsdev
