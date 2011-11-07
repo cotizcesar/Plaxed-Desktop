@@ -581,6 +581,7 @@ class HiloTimeLine(threading.Thread):
         self.time_line = time_line
         self.primera_carga = primera_carga
         self.ultimo=self.parent.ultimo[self.parent.indiceActual]
+        self.daemon = True
         self.start()
 
     def run(self):
@@ -725,6 +726,7 @@ class HiloValidar(threading.Thread):
         self.servidor=servidor
         self.clave=clave
         self.usuario=usuario
+        self.daemon = True
         self.start()
 
     def run(self):
