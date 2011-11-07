@@ -34,7 +34,7 @@ class statusNet():
         urllib2.install_opener(self.opener)
         self.conectado = False
         try:
-            open = urllib2.urlopen(apibase + '/account/verify_credentials.json', '', 15)
+            open = urllib2.urlopen(apibase + '/account/verify_credentials.json', '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
             leido = open.read()
             self.mi_perfil = json.loads(leido)
             self.var_conectado = True
@@ -42,11 +42,15 @@ class statusNet():
             self.clave = clave
             self.servidor = servidor
             self.apibase = apibase
-        except urllib2.HTTPError:
-            pass
+        except urllib2.HTTPError, e1:
+            log.debug('Error HTTP: '+ str(e1.code) + str(e1.read()))
+            self.respuesta_login = '{Error}'
         except urllib2.URLError, e:
             log.debug('Sin respuesta del servidor. Razon: '+ str(e.reason))
             self.respuesta_login = '{TimeOut}'
+        except:
+            log.debug('Error no identificado')
+            self.respuesta_login = '{Error}'
 
 
     def estaConectado(self):
@@ -96,7 +100,7 @@ class statusNet():
         else:
             filtro = ""
         try:
-            open = urllib2.urlopen(self.apibase + '/statuses/home_timeline.json' + filtro, '', 10)
+            open = urllib2.urlopen(self.apibase + '/statuses/home_timeline.json' + filtro, '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
             leido = open.read()
             miTL = json.loads(leido)
         except urllib2.URLError, e:
@@ -129,7 +133,7 @@ class statusNet():
     def Publicar(self, txt):
         paquete = urlencode({'status': txt, 'source': self.app_origen})
         try:
-            open = urllib2.urlopen(self.apibase + '/statuses/update.json?%s' % paquete, '')
+            open = urllib2.urlopen(self.apibase + '/statuses/update.json?%s' % paquete, '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
             leido = open.read()
             log.debug('Enviado: ' + str(leido))
         except:

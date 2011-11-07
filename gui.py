@@ -75,6 +75,15 @@ class InterfazPrincipal(wx.Frame):
     def BotonEstado(self, event):
         self.EnviarMensaje()
 
+    def TeclaF10(self, event):
+        keycode = event.GetKeyCode()
+        if keycode == wx.WXK_F10:
+            log.debug('F10: Enviar Mensaje')
+            self.EnviarMensaje()
+        else:
+            event.Skip()
+
+
     def EnviarMensaje(self):
         texto = self.txt_estado.GetValue()
         texto = texto.encode('utf8')
@@ -196,24 +205,35 @@ class InterfazPrincipal(wx.Frame):
     def TL_Vacio(self, msj):
         self.ActualizarTimer()
 
-    def MensajeEnviado(self, msj):
-        log.debug('Mensaje Enviado')
-        self.txt_estado.SetValue('')
-        self.txt_estado.Enable()
-        self.btnAceptar.Enable()
-
-    def MensajeNoEnviado(self, msj):
-        log.debug('****NO SE RECIBIERON MENSAJES DEL THREAD****')
-        log.debug('Mensaje No Enviado')
-        self.txt_estado.Enable()
-        self.btnAceptar.Enable()
+    def HiloEnviarMensaje(self, msj):
+        respuesta = msj.data
+        log.debug('Respuesta del Hilo "Enviar Mensaje": ' + respuesta)
+        if respuesta == "TimeOut":
+            log.debug('Reintente el envio nuevamente')
+            self.txt_estado.Enable()
+            self.btnAceptar.Enable()
+        if respuesta == "MensajeEnviado":
+            log.debug('Mensaje Enviado')
+            self.txt_estado.SetValue('')
+            self.txt_estado.Enable()
+            self.btnAceptar.Enable()
+        if respuesta == "MensajeNoEnviado":
+            log.debug('****NO SE RECIBIERON MENSAJES DEL THREAD****')
+            log.debug('Mensaje No Enviado')
+            self.txt_estado.Enable()
+            self.btnAceptar.Enable()
+        if respuesta == "APP_Desconectado":
+            log.debug('Reintente el envio nuevamente')
+            self.txt_estado.Enable()
+            self.btnAceptar.Enable()
 
     def APP_Desconectado(self, msj):
         log.debug('Aplicacion Desconectada')
+        log.debug('Se reintentara nuevamente en ' + str(self.intervaloTL) + ' segundos')
+        self.ActualizarTimer()
 
     def ReiniciaSolicitudTL(self, msj):
         log.debug('Interrumpiendo TL para reiniciar solicitud **')
-        #self.ActualizarTimer()
         self.Actualizar()
 
     def LinkPresionado(self, msj):
@@ -254,8 +274,7 @@ class InterfazPrincipal(wx.Frame):
     def ConfigurarVentana(self):
         Publisher().subscribe(self.TL_Mensajes, "TL_Mensajes")
         Publisher().subscribe(self.TL_Vacio, "TL_Vacio")
-        Publisher().subscribe(self.MensajeEnviado, "MensajeEnviado")
-        Publisher().subscribe(self.MensajeNoEnviado, "MensajeNoEnviado")
+        Publisher().subscribe(self.HiloEnviarMensaje, "Hilo_Enviar_Mensaje")
         Publisher().subscribe(self.APP_Desconectado, "APP_Desconectado")
         Publisher().subscribe(self.LinkPresionado, "LinkPresionado")
         Publisher().subscribe(self.ReiniciaSolicitudTL, "TL_No_Recibido")
@@ -303,11 +322,14 @@ class InterfazPrincipal(wx.Frame):
         self.txt_estado = wx.TextCtrl(self.panel, wx.ID_ANY, '', (-1, -1), (-1, 50), style=wx.TE_MULTILINE|wx.TE_NO_VSCROLL|wx.TE_PROCESS_ENTER)
         self.h_sizer1.Add(self.txt_estado, 1, wx.ALL|wx.EXPAND, 5)
         self.btnAceptar = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/aceptar.png", wx.BITMAP_TYPE_ANY ), pos=wx.DefaultPosition, size=(40,25), style=wx.BU_AUTODRAW )
+        self.btnAceptar.SetToolTipString(u'Enviar (F10)')
         self.h_sizer1.Add(self.btnAceptar, 0, wx.ALL, 5)
 
         #Configurando eventos
         self.panel.Bind(wx.EVT_BUTTON, self.BotonEstado, self.btnAceptar)
-        self.panel.Bind(wx.EVT_TEXT_ENTER, self.EnterEstado, self.txt_estado)
+        #self.panel.Bind(wx.EVT_TEXT_ENTER, self.EnterEstado, self.txt_estado) # Se envia mensaje con ENTER
+        #self.panel.Bind(wx.EVT_KEY_DOWN, self.TeclaF10, self.txt_estado)
+        self.txt_estado.Bind(wx.EVT_KEY_DOWN, self.TeclaF10)
         self.Bind(wx.EVT_SIZE, self.RedimensionVentana)
 
         #Barra de Herramientas
@@ -430,6 +452,9 @@ class MiHtmlWindow(wx.html.HtmlWindow):
     def OnLinkClicked(self, link):
         #wx.LaunchDefaultBrowser(link.GetHref())
         #wx.MessageBox(link.GetHref())
+        evento = link.GetEvent()
+        if evento.Button != 1:
+            return False
         self.enlace = link.GetHref()
         wx.CallAfter(Publisher().sendMessage, "LinkPresionado", "Final de Thread")
 
@@ -463,7 +488,7 @@ class PlaxedLogin(wx.Frame):
         self.ConfigurarVentana()
 
     def ConfigurarVentana(self):
-        Publisher().subscribe(self.LoginTimeOut, "LoginTimeOut")
+        Publisher().subscribe(self.HiloLogin, "Hilo_Login")
         log.debug('Configurando Ventana')
         icono = wx.Icon('img/iconosolo16.png', wx.BITMAP_TYPE_PNG)
         self.SetIcon(icono)
@@ -541,33 +566,40 @@ class PlaxedLogin(wx.Frame):
         self.clave = clave
         self.servidor = servidor
         self.PlayLoader()
-        Publisher().subscribe(self.LoginCorrecto, "LoginAceptado")
-        Publisher().subscribe(self.LoginFallido, "LoginRechazado")
         self.sBar.SetStatusText('Validando credenciales...')
         self.t = HiloValidar(self, self.servidor, self.usuario, self.clave)
 
-    def LoginCorrecto(self, msj):
-        log.debug('Accesando a Interfaz Principal')
-        self.sBar.SetStatusText(u'Cargando Aplicación...')
-        frmMain = InterfazPrincipal(self, APLICACION_VENTANA_TITULO, self.servidor, self.usuario, self.clave)
 
-    def LoginFallido(self, msj):
-        log.debug('Error de Autenticacion')
-        self.StopLoader()
-        self.sBar.SetStatusText(u'Error de Autenticación...')
-        self.txt_usuario.Enable()
-        self.txt_clave.Enable()
-        self.txt_usuario.SetFocus()
-        self.boton.Enable()
-
-    def LoginTimeOut(self, msj):
-        log.debug(u'No se recibió respuesta del servidor')
-        self.StopLoader()
-        self.sBar.SetStatusText(u'No se recibió respuesta del servidor')
-        self.txt_usuario.Enable()
-        self.txt_clave.Enable()
-        self.txt_usuario.SetFocus()
-        self.boton.Enable()
+    def HiloLogin(self, msj):
+        respuesta = msj.data
+        if respuesta == 'LoginTimeOut':
+            log.debug(u'No se recibió respuesta del servidor')
+            self.StopLoader()
+            self.sBar.SetStatusText(u'No se recibió respuesta del servidor')
+            self.txt_usuario.Enable()
+            self.txt_clave.Enable()
+            self.txt_usuario.SetFocus()
+            self.boton.Enable()
+        if respuesta == 'LoginAceptado':
+            log.debug('Accesando a Interfaz Principal')
+            self.sBar.SetStatusText(u'Cargando Aplicación...')
+            frmMain = InterfazPrincipal(self, APLICACION_VENTANA_TITULO, self.servidor, self.usuario, self.clave)
+        if respuesta == 'LoginRechazado':
+            log.debug('Error de Autenticacion')
+            self.StopLoader()
+            self.sBar.SetStatusText(u'Error de Autenticación...')
+            self.txt_usuario.Enable()
+            self.txt_clave.Enable()
+            self.txt_usuario.SetFocus()
+            self.boton.Enable()
+        if respuesta == 'ErrorDesconocido':
+            log.debug('Reintente nuevamente')
+            self.StopLoader()
+            self.sBar.SetStatusText(u'Error desconocido...')
+            self.txt_usuario.Enable()
+            self.txt_clave.Enable()
+            self.txt_usuario.SetFocus()
+            self.boton.Enable()
 
 
     def __del__(self):
@@ -754,12 +786,15 @@ class HiloValidar(threading.Thread):
     def run(self):
         self.red = statusNet(self.servidor, self.usuario, self.clave)
         if self.red.respuesta_login == '{TimeOut}':
-            wx.CallAfter(Publisher().sendMessage, "LoginTimeOut", "Final de Thread")
+            wx.CallAfter(Publisher().sendMessage, "Hilo_Login", "LoginTimeOut")
+            return False
+        if self.red.respuesta_login == '{Error}':
+            wx.CallAfter(Publisher().sendMessage, "Hilo_Login", "ErrorDesconocido")
             return False
         if self.red.estaConectado():
-            wx.CallAfter(Publisher().sendMessage, "LoginAceptado", "Final de Thread")
+            wx.CallAfter(Publisher().sendMessage, "Hilo_Login", "LoginAceptado")
         else:
-            wx.CallAfter(Publisher().sendMessage, "LoginRechazado", "Final de Thread")
+            wx.CallAfter(Publisher().sendMessage, "Hilo_Login", "LoginRechazado")
 
 class HiloEnviarMensaje(threading.Thread):
     servidor = ''
@@ -781,13 +816,15 @@ class HiloEnviarMensaje(threading.Thread):
         self.red = statusNet(self.servidor, self.usuario, self.clave)
         if self.red.estaConectado():
             res = self.red.Publicar(self.txt)
+            if res == "{TimeOut}":
+                wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje", "TimeOut")
             if res != "{Error}":
-                wx.CallAfter(Publisher().sendMessage, "MensajeEnviado", "Final de Thread")
+                wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje", "MensajeEnviado")
             else:
-                wx.CallAfter(Publisher().sendMessage, "MensajeNoEnviado", "Final de Thread")
+                wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje", "MensajeNoEnviado")
 
         else:
-            wx.CallAfter(Publisher().sendMessage, "APP_Desconectado", "Final de Thread")
+            wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje", "APP_Desconectado")
 
 
 
