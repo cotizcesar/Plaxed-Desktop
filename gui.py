@@ -22,7 +22,7 @@ log.setLevel(logging.DEBUG)
 
 class InterfazPrincipal(wx.Frame):
 
-    tls = ['tl_home','tl_public','replies','favorites','message']
+    tls = ['tl_home','tl_public','replies','favorites','messages']
     cols = []
     ultimo = []
     cols_vacia = []
@@ -35,6 +35,7 @@ class InterfazPrincipal(wx.Frame):
     dir_usuario = ''
     dir_imagenes = ''
     app_dir_img = './img/'
+    html_loader_tl = '<br><br><center><img src="img/loader_timeline.gif"></center>'
     usuario = ''
     clave = ''
     servidor = ''
@@ -79,11 +80,13 @@ class InterfazPrincipal(wx.Frame):
         texto = texto.encode('utf8')
         texto = texto.strip()
         if texto != '':
-			self.txt_estado.Disable()
-			self.btnAceptar.Disable()
-			self.respuestaEnvio = HiloEnviarMensaje(self, self.servidor, self.usuario, self.clave, texto)            
+            self.txt_estado.Disable()
+            self.btnAceptar.Disable()
+            self.respuestaEnvio = HiloEnviarMensaje(self, self.servidor, self.usuario, self.clave, texto)
         else:
             wx.MessageBox('Debe ingresar un mensaje')
+            self.txt_estado.SetValue('')
+            self.txt_estado.SetFocus()
 
 
     def InnerHTML(self, txt):
@@ -102,7 +105,9 @@ class InterfazPrincipal(wx.Frame):
             Lugar = 'Respuestas'
         if origen == 'favorites':
             Lugar = 'Favoritos'
-        self.sBar.SetFields((Lugar,'www.plaxed.com'))
+        if origen == 'messages':
+            Lugar = 'Mensajes'
+        self.sBar.SetFields((Lugar,'www.plaxed.com / La Primera Red Social Venezolana'))
 
     def DescargarAvatar(self, ruta_img):
         tmp = ruta_img.split("/")
@@ -189,13 +194,13 @@ class InterfazPrincipal(wx.Frame):
 
     def TL_Vacio(self, msj):
         self.ActualizarTimer()
-    
+
     def MensajeEnviado(self, msj):
-		log.debug('Mensaje Enviado')
-		self.txt_estado.SetValue('')
-		self.txt_estado.Enable()
-		self.btnAceptar.Enable()
-    
+        log.debug('Mensaje Enviado')
+        self.txt_estado.SetValue('')
+        self.txt_estado.Enable()
+        self.btnAceptar.Enable()
+
     def MensajeNoEnviado(self, msj):
         log.debug('Mensaje No Enviado')
         self.txt_estado.Enable()
@@ -204,14 +209,52 @@ class InterfazPrincipal(wx.Frame):
     def APP_Desconectado(self, msj):
         log.debug('Aplicacion Desconectada')
 
+    def LinkPresionado(self, msj):
+        link = self.cols[0].enlace
+        arreglo = link.split('/')
+        url_tipo = arreglo[3]
+        url_servidor=arreglo[2]
+        #
+        arreglo1 = self.servidor.split('/')
+        app_servidor = arreglo1[2]
+        #for parte in arreglo:
+        #    wx.MessageBox(str(parte))
+
+        #wx.MessageBox(tipo)
+        if url_servidor != app_servidor:
+            wx.LaunchDefaultBrowser(link)
+
+        if url_tipo == 'tag':
+            wx.MessageBox(u'Los tags no están implementados todavía')
+            return False
+
+        if url_tipo == 'user':
+            wx.MessageBox(u'Los perfiles de usuario no están implementados todavía')
+            return False
+
+        if url_tipo == 'group':
+            wx.MessageBox(u'Los grupos no están implementados todavía')
+            return False
+
+        if url_tipo == 'url':
+            wx.LaunchDefaultBrowser(link)
+            #wx.MessageBox(u'Las URLs no están implementadas todavía')
+            return False
+        #wx.MessageBox(url_servidor)
+        #wx.MessageBox(app_servidor)
+
+
     def ConfigurarVentana(self):
         Publisher().subscribe(self.TL_Mensajes, "TL_Mensajes")
         Publisher().subscribe(self.TL_Vacio, "TL_Vacio")
         Publisher().subscribe(self.MensajeEnviado, "MensajeEnviado")
         Publisher().subscribe(self.MensajeNoEnviado, "MensajeNoEnviado")
         Publisher().subscribe(self.APP_Desconectado, "APP_Desconectado")
+        Publisher().subscribe(self.LinkPresionado, "LinkPresionado")
         #
-        for i in range(1, len(self.tls)):
+        log.debug('Cantidad de TimeLines: '+str(len(self.tls)))
+        for i in range(len(self.tls)):
+            log.debug('Inicializando TL ' + str(i) + ' (' + self.tls[i]  + ')')
             self.txt.append('')
             self.ultimo.append(0)
             self.cols_vacia.append(True)
@@ -269,7 +312,7 @@ class InterfazPrincipal(wx.Frame):
         self.btnRespuestas = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/respuestas24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, btn_tam, wx.BU_AUTODRAW)
         self.btnRespuestas.SetToolTipString( u"Respuestas" )
         self.btnMensajes = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/dm24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, btn_tam, wx.BU_AUTODRAW)
-        self.btnMensajes.SetToolTipString( u"Mensajes (Aun no implementado)" )
+        self.btnMensajes.SetToolTipString( u"Mensajes" )
         self.btnFavoritos = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/favoritos24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, btn_tam, wx.BU_AUTODRAW)
         self.btnFavoritos.SetToolTipString( u"Favoritos" )
         self.h_sizerBarra.Add(self.btnInicio, 0, wx.BOTTOM|wx.LEFT, 5)
@@ -282,6 +325,7 @@ class InterfazPrincipal(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.CambioLinea, self.btnInicio)
         self.Bind(wx.EVT_BUTTON, self.CambioLinea, self.btnRespuestas)
         self.Bind(wx.EVT_BUTTON, self.CambioLinea, self.btnFavoritos)
+        self.Bind(wx.EVT_BUTTON, self.CambioLinea, self.btnMensajes)
         #
         self.h_sizer2 = wx.BoxSizer(wx.HORIZONTAL)
         #
@@ -300,6 +344,7 @@ class InterfazPrincipal(wx.Frame):
         log.debug('Ventana Configurada')
         log.debug('Cerrando Ventana de Login')
         self.Centre(wx.BOTH)
+        self.InnerHTML(self.html_loader_tl)
         self.Show()
         self.parent.Hide()
 
@@ -319,16 +364,21 @@ class InterfazPrincipal(wx.Frame):
         if obj == self.btnFavoritos:
             indiceNuevo = self.tls.index('favorites')
 
+        if obj == self.btnMensajes:
+            indiceNuevo = self.tls.index('messages')
+
         if indiceNuevo == indiceViejo:
-            log.debug('Seleccionando mismo Tl. No se carga')
+            log.debug('Seleccionando mismo TL. Se ignora cambio')
             return False
-        self.cols[0].SetOrigen(self.tls[indiceNuevo])
+
         self.indiceActual = indiceNuevo
+        self.cols[0].SetOrigen(self.tls[self.indiceActual])
+
         log.debug('Cambio de Linea de Tiempo')
         #
         self.InnerHTML('')
         if self.cols_vacia[self.indiceActual] == True:
-            self.InnerHTML('<center>Cargando...</center>')
+            self.InnerHTML(self.html_loader_tl)
         else:
             self.InnerHTML(self.txt[self.indiceActual])
 
@@ -361,8 +411,21 @@ class InterfazPrincipal(wx.Frame):
             os.mkdir(self.dir_imagenes)
             log.debug('Se creo la carpeta Imagenes')
 
+class MiHtmlWindow(wx.html.HtmlWindow):
 
-class cColumna(wx.html.HtmlWindow):
+    enlace = ''
+    def __init__(self, parent, id, size=(600,400)):
+        wx.html.HtmlWindow.__init__(self,parent, id, size=size)
+        if "gtk2" in wx.PlatformInfo:
+            self.SetStandardFonts()
+
+    def OnLinkClicked(self, link):
+        #wx.LaunchDefaultBrowser(link.GetHref())
+        #wx.MessageBox(link.GetHref())
+        self.enlace = link.GetHref()
+        wx.CallAfter(Publisher().sendMessage, "LinkPresionado", "Final de Thread")
+
+class cColumna(MiHtmlWindow):
 
     origen = ''
     intervalo = 0
@@ -518,12 +581,12 @@ class HiloTimeLine(threading.Thread):
         self.time_line = time_line
         self.primera_carga = primera_carga
         self.ultimo=self.parent.ultimo[self.parent.indiceActual]
-        log.debug('Ultimo ID Thread: ' + str(self.parent.ultimo[self.parent.indiceActual]));
         self.start()
 
     def run(self):
         self.red = statusNet(self.servidor, self.usuario, self.clave)
         if self.red.estaConectado():
+            #log.debug('Ultimo ID de este TimeLine: ' + str(self.ultimo));
             self.dir_usuario = self.dir_perfiles + str(self.red.miPerfilAttr('id'))
             self.dir_imagenes = self.dir_usuario + '/imagenes/'
             log.debug("Solicitando Datos del Servidor")
@@ -535,10 +598,11 @@ class HiloTimeLine(threading.Thread):
                 mitl = self.red.Respuestas(self.ultimo)
             if self.time_line == 'favorites':
                 mitl = self.red.Favoritos(self.ultimo)
+            if self.time_line == 'messages':
+                mitl = self.red.Buzon(self.ultimo)
             tmp = ''
             ultimo = 0
             cont = 0
-
             if len(mitl) > 0:
                 log.debug("Se recibieron mensajes nuevos")
                 log.debug("Parseando los datos")
@@ -547,39 +611,57 @@ class HiloTimeLine(threading.Thread):
                         self.color_tab = self.color_tab_1
                     else:
                         self.color_tab = self.color_tab_2
-                    #self.color_tab = '#FFFFFF' #BORRAR ESTO ############
                     cont = cont + 1
-                    self.DescargarAvatar(tl['user']['profile_image_url'])
-                    img_tmp = tl['user']['profile_image_url']
+                    #Si son mensajes, los usuarios se llaman sender y recipient
+                    usuario2 = 'recipient'
+                    if self.time_line == 'messages':
+                        usuario1 = 'sender'
+                    else:
+                        usuario1 = 'user'
+                    self.DescargarAvatar(tl[usuario1]['profile_image_url'])
+                    img_tmp = tl[usuario1]['profile_image_url']
                     img_arr = img_tmp.split("/")
                     img_nombre = img_arr[len(img_arr) - 1]
                     if (os.path.isfile(self.dir_imagenes + img_nombre)):
                         img_ruta_local = self.dir_imagenes + img_nombre
                     else:
                         img_ruta_local = self.app_dir_img + 'default.png'
+
                     tmp = tmp + '<table bgcolor="' + self.color_tab + '" width="100%" border="0"><tr><td width="48" valign="top"><img align="left" src="' + img_ruta_local + '"></td><td valign="top">'
-                    tmp = tmp + '<font size="2"><b>' + tl['user']['screen_name'] + '</b><br>'
-                    if tl['in_reply_to_user_id'] != None:
-                        en_respuesta = "En respuesta a <i>" + tl['in_reply_to_screen_name'] + "</i>"
+                    if self.time_line == 'messages':
+                        tmp = tmp + '<font size="2"><b>' + tl[usuario1 +'_screen_name'] + '</b><br>'
                     else:
+                        tmp = tmp + '<font size="2"><b>' + tl[usuario1]['screen_name'] + '</b><br>'
+
+                    if self.time_line == 'messages':
+                        #en_respuesta = 'En respueta a <i>' + tl[usuario2+'_screen_name'] + "</i>"
                         en_respuesta = ''
+                    else:
+                        if tl['in_reply_to_user_id'] != None:
+                            en_respuesta = "En respuesta a <i>" + tl['in_reply_to_screen_name'] + "</i>"
+                        else:
+                            en_respuesta = ''
                     fila_info = '<br><font size="1" color="gray">%s</font>' % en_respuesta
-                    tmp = u"%s %s</font>%s</td></tr></table>" % (tmp, tl['text'],fila_info) #text o statusnet_html
-                    if cont < len(mitl):
-                        #tmp = tmp + "<br><br>"
-                        pass
+                    if self.time_line == 'messages':
+                        msj = tl['text']
+                    else:
+                        msj = tl['statusnet_html']
+                    tmp = u"%s %s</font>%s</td></tr></table>" % (tmp, msj,fila_info) #text o statusnet_html
+                    #
                     if ultimo == 0:
                         ultimo = tl['id']
                         self.ultimo = ultimo
                 log.debug('Ultimo ID: ' + str(self.ultimo))
                 log.debug("Finalizando descarga de mensajes")
-                self.txt = tmp + self.txt
+                self.txt = tmp
+
                 wx.CallAfter(Publisher().sendMessage, "TL_Mensajes", "Final de Thread")
             else:
                 wx.CallAfter(Publisher().sendMessage, "TL_Vacio", "Final de Thread")
                 log.debug("No existen mensajes nuevos")
         else:
             wx.CallAfter(Publisher().sendMessage, "APP_Desconectado", "Final de Thread")
+
 
     def RutaOnlineToLocal(self, ruta):
         img_arr = ruta.split("/")
@@ -675,7 +757,7 @@ class HiloEnviarMensaje(threading.Thread):
                 wx.CallAfter(Publisher().sendMessage, "MensajeEnviado", "Final de Thread")
             else:
                 wx.CallAfter(Publisher().sendMessage, "MensajeNoEnviado", "Final de Thread")
-            
+
         else:
             wx.CallAfter(Publisher().sendMessage, "APP_Desconectado", "Final de Thread")
 

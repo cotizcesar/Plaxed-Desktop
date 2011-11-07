@@ -18,7 +18,7 @@ class statusNet():
     apibase = ''
     servidor = ''
     mi_perfil = {}
-    app_origen = 'Plaxed Desktop (Demo)'
+    app_origen = 'Plaxed Desktop (Pre-Alpha)'
 
     def __init__(self, servidor, usuario, clave):
         self.conectar(servidor, usuario, clave)
@@ -105,15 +105,14 @@ class statusNet():
         miTL = json.loads(leido)
         return miTL
 
-    def miBuzon(self, param=''):
+    def Buzon(self, ultimo=0, param=''):
         param.lower()
         if param != "sent" and param != "new":
             param = ""
         else:
             param = u"/%s" % param
             param.replace("//", "/")
-        print param
-        open = urllib2.urlopen(self.apibase + '/direct_messages' + param + '.json')
+        open = urllib2.urlopen(self.apibase + '/direct_messages' + param + '.json?since_id=' + str(ultimo))
         leido = open.read()
         miTL = json.loads(leido)
         return miTL
@@ -126,5 +125,5 @@ class statusNet():
             log.debug('Enviado: ' + str(leido))
         except:
             leido = "{Error}"
-            log.debug('Envio Fallido')
+            log.debug('{Error} Envio Fallido')
         return leido
