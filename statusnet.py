@@ -18,7 +18,8 @@ class statusNet():
     apibase = ''
     servidor = ''
     mi_perfil = {}
-    app_origen = 'Plaxed Desktop (Pre-Alpha)'
+    app_origen = APLICACION_VENTANA_TITULO
+    respuesta_login = ''
 
     def __init__(self, servidor, usuario, clave):
         self.conectar(servidor, usuario, clave)
@@ -33,7 +34,7 @@ class statusNet():
         urllib2.install_opener(self.opener)
         self.conectado = False
         try:
-            open = urllib2.urlopen(apibase + '/account/verify_credentials.json')
+            open = urllib2.urlopen(apibase + '/account/verify_credentials.json', '', 15)
             leido = open.read()
             self.mi_perfil = json.loads(leido)
             self.var_conectado = True
@@ -43,6 +44,10 @@ class statusNet():
             self.apibase = apibase
         except urllib2.HTTPError:
             pass
+        except urllib2.URLError, e:
+            log.debug('Sin respuesta del servidor. Razon: '+ str(e.reason))
+            self.respuesta_login = '{TimeOut}'
+
 
     def estaConectado(self):
         return self.var_conectado
@@ -90,9 +95,13 @@ class statusNet():
             filtro = "?since_id=" + str(ultimo)
         else:
             filtro = ""
-        open = urllib2.urlopen(self.apibase + '/statuses/home_timeline.json' + filtro)
-        leido = open.read()
-        miTL = json.loads(leido)
+        try:
+            open = urllib2.urlopen(self.apibase + '/statuses/home_timeline.json' + filtro, '', 10)
+            leido = open.read()
+            miTL = json.loads(leido)
+        except urllib2.URLError, e:
+            log.debug('Sin respuesta del servidor. Razon: '+ str(e.reason))
+            miTL = '{TimeOut}'
         return miTL
 
     def TimeLinePublic(self, ultimo=0):

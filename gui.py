@@ -168,7 +168,7 @@ class InterfazPrincipal(wx.Frame):
             self.timer.cancel()
             self.timer = None
             log.debug("Reiniciando timer a %s segundos", str(self.intervaloTL))
-        self.timer = threading.Timer(self.intervaloTL, self.Actualizar)
+            self.timer = threading.Timer(self.intervaloTL, self.Actualizar)
         self.timer.start()
 
 
@@ -180,6 +180,7 @@ class InterfazPrincipal(wx.Frame):
         event.Skip()
 
     def TL_Mensajes(self, msj):
+        log.debug('****SE RECIBIERON MENSAJES DEL THREAD****')
         if self.primeraCargaImg:
             self.primeraCargaImg = False
         self.ultimo[self.indiceActual] = self.respuestaTL.ultimo
@@ -202,12 +203,18 @@ class InterfazPrincipal(wx.Frame):
         self.btnAceptar.Enable()
 
     def MensajeNoEnviado(self, msj):
+        log.debug('****NO SE RECIBIERON MENSAJES DEL THREAD****')
         log.debug('Mensaje No Enviado')
         self.txt_estado.Enable()
         self.btnAceptar.Enable()
 
     def APP_Desconectado(self, msj):
         log.debug('Aplicacion Desconectada')
+
+    def ReiniciaSolicitudTL(self, msj):
+        log.debug('Interrumpiendo TL para reiniciar solicitud **')
+        #self.ActualizarTimer()
+        self.Actualizar()
 
     def LinkPresionado(self, msj):
         link = self.cols[0].enlace
@@ -251,6 +258,7 @@ class InterfazPrincipal(wx.Frame):
         Publisher().subscribe(self.MensajeNoEnviado, "MensajeNoEnviado")
         Publisher().subscribe(self.APP_Desconectado, "APP_Desconectado")
         Publisher().subscribe(self.LinkPresionado, "LinkPresionado")
+        Publisher().subscribe(self.ReiniciaSolicitudTL, "TL_No_Recibido")
         #
         log.debug('Cantidad de TimeLines: '+str(len(self.tls)))
         for i in range(len(self.tls)):
@@ -455,6 +463,7 @@ class PlaxedLogin(wx.Frame):
         self.ConfigurarVentana()
 
     def ConfigurarVentana(self):
+        Publisher().subscribe(self.LoginTimeOut, "LoginTimeOut")
         log.debug('Configurando Ventana')
         icono = wx.Icon('img/iconosolo16.png', wx.BITMAP_TYPE_PNG)
         self.SetIcon(icono)
@@ -540,7 +549,7 @@ class PlaxedLogin(wx.Frame):
     def LoginCorrecto(self, msj):
         log.debug('Accesando a Interfaz Principal')
         self.sBar.SetStatusText(u'Cargando Aplicación...')
-        frmMain = InterfazPrincipal(self, "Plaxed Desktop (Demo)", self.servidor, self.usuario, self.clave)
+        frmMain = InterfazPrincipal(self, APLICACION_VENTANA_TITULO, self.servidor, self.usuario, self.clave)
 
     def LoginFallido(self, msj):
         log.debug('Error de Autenticacion')
@@ -550,6 +559,16 @@ class PlaxedLogin(wx.Frame):
         self.txt_clave.Enable()
         self.txt_usuario.SetFocus()
         self.boton.Enable()
+
+    def LoginTimeOut(self, msj):
+        log.debug(u'No se recibió respuesta del servidor')
+        self.StopLoader()
+        self.sBar.SetStatusText(u'No se recibió respuesta del servidor')
+        self.txt_usuario.Enable()
+        self.txt_clave.Enable()
+        self.txt_usuario.SetFocus()
+        self.boton.Enable()
+
 
     def __del__(self):
         try:
@@ -601,6 +620,9 @@ class HiloTimeLine(threading.Thread):
                 mitl = self.red.Favoritos(self.ultimo)
             if self.time_line == 'messages':
                 mitl = self.red.Buzon(self.ultimo)
+            if mitl == '{TimeOut}':
+                wx.CallAfter(Publisher().sendMessage, "TL_No_Recibido", "Final de Thread")
+                return False
             tmp = ''
             ultimo = 0
             cont = 0
@@ -731,6 +753,9 @@ class HiloValidar(threading.Thread):
 
     def run(self):
         self.red = statusNet(self.servidor, self.usuario, self.clave)
+        if self.red.respuesta_login == '{TimeOut}':
+            wx.CallAfter(Publisher().sendMessage, "LoginTimeOut", "Final de Thread")
+            return False
         if self.red.estaConectado():
             wx.CallAfter(Publisher().sendMessage, "LoginAceptado", "Final de Thread")
         else:
@@ -749,6 +774,7 @@ class HiloEnviarMensaje(threading.Thread):
         self.clave=clave
         self.usuario=usuario
         self.txt = txt
+        self.daemon = True
         self.start()
 
     def run(self):
