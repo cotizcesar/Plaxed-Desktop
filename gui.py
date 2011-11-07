@@ -294,6 +294,24 @@ class InterfazPrincipal(wx.Frame):
                 #wx.MessageBox('Respuesta a usuario %s, Id del status %s' % (usuario, id))
                 self.vtnRespuesta = VentanaResponder(self, parametro)
                 self.vtnRespuesta.Show(callback=self.VentanaRespuestaOk, cancelCallback=self.VentanaRespuestaCancel)
+            if accion == 'retweet':
+                id = arreglo[5]
+                wx.MessageBox('Repetir: ' + id)
+            if accion == 'delete':
+                id = arreglo[5]
+                wx.MessageBox('Borrar: ' + id)
+
+        if url_tipo == 'favorites':
+            accion = arreglo[4]
+            id = arreglo[5]
+            if accion == 'create':
+                wx.MessageBox('Crear Favorito: ' + id)
+            if accion == 'destroy':
+                wx.MessageBox('Destruir Favorito: ' + id)
+            #
+        if url_tipo == 'conversation':
+            id = arreglo[4]
+            wx.MessageBox('Ver Conversacion: ' + id)
             return False
 
     def VentanaRespuestaOk(self, txt, idmensaje):
@@ -532,9 +550,9 @@ class PlaxedLogin(wx.Frame):
         self.bsizer = wx.BoxSizer(wx.VERTICAL)
         self.txt_usuario = wx.TextCtrl(self.panel, wx.ID_ANY, '', size=(160, -1))
         self.txt_usuario.SetFocus()
-        self.txt_usuario.SetMaxLength(15)
+        self.txt_usuario.SetMaxLength(30)
         self.txt_clave = wx.TextCtrl(self.panel, wx.ID_ANY, '', size=(160, -1), style=wx.TE_PASSWORD)
-        self.txt_clave.SetMaxLength(15)
+        self.txt_clave.SetMaxLength(30)
         self.boton = wx.Button(self.panel, wx.ID_ANY, 'Ingresar')
         self.imagen = wx.StaticBitmap(self.panel, wx.ID_ANY, wx.Bitmap( u"img/iconosolo64.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, 0 )
 
@@ -673,7 +691,6 @@ class HiloTimeLine(threading.Thread):
     def run(self):
         self.red = statusNet(self.servidor, self.usuario, self.clave)
         if self.red.estaConectado():
-            #log.debug('Ultimo ID de este TimeLine: ' + str(self.ultimo));
             self.dir_usuario = self.dir_perfiles + str(self.red.miPerfilAttr('id'))
             self.dir_imagenes = self.dir_usuario + '/imagenes/'
             log.debug("Solicitando Datos del Servidor")
@@ -722,23 +739,50 @@ class HiloTimeLine(threading.Thread):
                         tmp = tmp + '<font size="2"><b>' + tl[usuario1 +'_screen_name'] + '</b><br>'
                     else:
                         tmp = tmp + '<font size="2"><b>' + tl[usuario1]['screen_name'] + '</b><br>'
-
-                    if self.time_line == 'messages':
-                        #en_respuesta = 'En respueta a <i>' + tl[usuario2+'_screen_name'] + "</i>"
-                        en_respuesta = ''
-                    else:
+                    #
+                    fila_info = []
+                    fila_info.append('<br>')
+                    fila_info.append('<font size="1" color="gray">')
+                    if self.time_line != 'messages':
                         if tl['in_reply_to_user_id'] != None:
-                            en_respuesta = "En respuesta a <i>" + tl['in_reply_to_screen_name'] + "</i>"
-                        else:
-                            en_respuesta = ''
-                    fila_info = '<br><font size="1" color="gray">%s</font>' % en_respuesta
+                            html = 'En respuesta a <i>' + tl['in_reply_to_screen_name'] +  '</i>'
+                            fila_info.append(html)
+                    #
                     if self.time_line!= 'messages':
-                        fila_info += ' <a href="http://beta.plaxed.com/notice/new/%s/%s">Responder</a>' % (tl[usuario1]['screen_name'], tl['id'])
+                        html = u'Vía %s' % tl['source']
+                        fila_info.append(html)
+                        #
+                        html = '<a href="%s/notice/new/%s/%s">Responder</a>' % (self.servidor, tl[usuario1]['screen_name'], tl['id'])
+                        fila_info.append(html)
+                        # si es mi tweet, puedo borrar, si no, puedo repetir
+                        if self.red.miPerfilAttr('id')!=tl[usuario1]['id']:
+                            html = '<a href="%s/notice/retweet/%s">Repetir</a>' % (self.servidor, tl['id'])
+                            fila_info.append(html)
+                        else:
+                            html = '<a href="%s/notice/delete/%s">Borrar</a>' % (self.servidor, tl['id'])
+                            fila_info.append(html)
+
+                        html = '<a href="%s/favorites/create/%s">Favorito</a>' % (self.servidor, tl['id'])
+                        fila_info.append(html)
+
+                        html = '<a href="%s/conversation/%s">Contexto</a>' % (self.servidor, tl['statusnet_conversation_id'])
+                        fila_info.append(html)
+
+                        #log.debug(str(tl['statusnet_conversation_id']))
+
+                    fila_info.append('</font>')
+
                     if self.time_line == 'messages':
                         msj = tl['text']
                     else:
                         msj = tl['statusnet_html']
-                    tmp = u"%s %s</font>%s</td></tr></table>" % (tmp, msj,fila_info) #text o statusnet_html
+                    tmp = u"%s %s</font>" % (tmp, msj) #text o statusnet_html
+                    cantidad=len(fila_info)
+                    for i in range(0,cantidad):
+                        if i>2 and i < (cantidad-1):
+                            tmp += ' / '
+                        tmp += unicode(fila_info[i])
+                    tmp += '</td></tr></table>'
                     #
                     if ultimo == 0:
                         ultimo = tl['id']
@@ -828,10 +872,12 @@ class HiloValidar(threading.Thread):
         if self.red.respuesta_login == '{Error}':
             wx.CallAfter(Publisher().sendMessage, "Hilo_Login", "ErrorDesconocido")
             return False
-        if self.red.estaConectado():
+        if self.red.respuesta_login == '{CredencialValida}':
             wx.CallAfter(Publisher().sendMessage, "Hilo_Login", "LoginAceptado")
-        else:
+            return True
+        if self.red.respuesta_login == '{CredencialInvalida}':
             wx.CallAfter(Publisher().sendMessage, "Hilo_Login", "LoginRechazado")
+            return True
 
 class HiloEnviarMensaje(threading.Thread):
     servidor = ''
@@ -899,7 +945,7 @@ class VentanaResponder(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.CerrandoVentana)
         datos = self.destinatario.split(',')
         self.idmensaje = datos[1]
-        self.SetTitle('Reponder a ' + datos[0])
+        self.SetTitle('Responder a @' + datos[0])
 
     def Show(self, callback=None, cancelCallback=None):
         self.callback = callback
@@ -918,6 +964,7 @@ class VentanaResponder(wx.Frame):
         texto = texto.strip()
         if texto == '':
             wx.MessageBox('Debe ingresar un mensaje')
+            self.Bloquear(False)
         else:
             self.callback(texto, self.idmensaje)
 

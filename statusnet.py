@@ -18,7 +18,7 @@ class statusNet():
     apibase = ''
     servidor = ''
     mi_perfil = {}
-    app_origen = APLICACION_VENTANA_TITULO
+    app_origen = APLICACION_SOURCE
     respuesta_login = ''
 
     def __init__(self, servidor, usuario, clave):
@@ -42,9 +42,13 @@ class statusNet():
             self.clave = clave
             self.servidor = servidor
             self.apibase = apibase
+            self.respuesta_login = '{CredencialValida}'
         except urllib2.HTTPError, e1:
             log.debug('Error HTTP: '+ str(e1.code) + str(e1.read()))
-            self.respuesta_login = '{Error}'
+            if e1.code == 401:
+                self.respuesta_login = '{CredencialInvalida}'
+            else:
+                self.respuesta_login = '{Error}'
         except urllib2.URLError, e:
             log.debug('Sin respuesta del servidor. Razon: '+ str(e.reason))
             self.respuesta_login = '{TimeOut}'
