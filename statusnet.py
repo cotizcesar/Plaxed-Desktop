@@ -54,9 +54,8 @@ class statusNet():
             log.debug('Sin respuesta del servidor. Razon: '+ str(e.reason))
             self.respuesta_login = '{TimeOut}'
         except socket.timeout, e2:
-            log.debug('El Socket devolvio un TimeOut')
+            log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
             self.respuesta_login = '{TimeOut}'
-            wx.MessageBox('Error del Socket ' + str(e2))
         except:
             log.debug('Error no identificado')
             self.respuesta_login = '{Error}'
