@@ -134,7 +134,9 @@ class InterfazPrincipal(wx.Frame):
 
     def InnerHTML(self, txt):
         log.debug("Inyectando HTML")
+        bottom=self.cols[0].GetBottom()
         self.cols[0].SetPage(txt)
+        self.cols[0].SetBottom(bottom)
         log.debug("Finalizando Inyeccion HTML")
 
     def ActualizaBarraEstado(self):
@@ -555,11 +557,23 @@ class MiHtmlWindow(wx.html.HtmlWindow):
         self.SetFonts("Tahoma", "Courier New", _FONT_SIZES)
 
     def OnLinkClicked(self, link):
+        #
+        #wx.MessageBox(str(self.GetVirtualSize()[0]))
+        #return False
+        #
         evento = link.GetEvent()
         if evento.Button != 1:
             return False
         self.enlace = link.GetHref()
         wx.CallAfter(Publisher().sendMessage, "LinkPresionado", "Final de Thread")
+    
+    def GetBottom(self):
+        bottom = self.GetBestSize()[1]-self.GetViewStart()[1]
+        return bottom
+    
+    def SetBottom(self, param):
+        bottom = self.GetBestSize()[1]-param
+        self.Scroll(0, bottom)
 
 class cColumna(MiHtmlWindow):
 
@@ -1002,7 +1016,7 @@ class VentanaResponder(wx.Frame):
         self.bs_horizontal = wx.BoxSizer(wx.HORIZONTAL)
         loaderEnvioRuta = 'img/loader_envio.gif'
         self.loaderEnvio = wx.animate.GIFAnimationCtrl(self.panel, -1, loaderEnvioRuta, pos=(-1, -1))
-        self.bs_horizontal.Add(self.loaderEnvio, 1, wx.ALL|wx.ALIGN_BOTTOM, 0)
+        self.bs_horizontal.Add(self.loaderEnvio, 1, wx.ALL|wx.ALIGN_BOTTOM, 5)
         self.loaderEnvio.GetPlayer().UseBackgroundColour(True)
         #
         self.lblCuenta = wx.StaticText(self.panel, wx.ID_ANY, '140', wx.DefaultPosition, wx.DefaultSize, 0 )
