@@ -8,7 +8,7 @@ import socket
 
 logging.basicConfig()
 log = logging.getLogger('StatusNET')
-log.setLevel(logging.DEBUG)
+#log.setLevel(logging.DEBUG)
 
 
 class statusNet():
@@ -23,9 +23,9 @@ class statusNet():
     respuesta_login = ''
 
     def __init__(self, servidor, usuario, clave):
-        self.conectar(servidor, usuario, clave)
+        self.Conectar(servidor, usuario, clave)
 
-    def conectar(self, servidor, usuario, clave):
+    def Conectar(self, servidor, usuario, clave):
         apibase = servidor + "/api"
         apibase.replace("//", "/")
         pwd_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
@@ -55,19 +55,17 @@ class statusNet():
             self.respuesta_login = '{TimeOut}'
         except socket.timeout, e2:
             log.debug('El Socket devolvio un TimeOut')
-            miTL = '{TimeOut}'
+            self.respuesta_login = '{TimeOut}'
             wx.MessageBox('Error del Socket ' + str(e2))
         except:
             log.debug('Error no identificado')
             self.respuesta_login = '{Error}'
 
 
-    def estaConectado(self):
+    def EstaConectado(self):
         return self.var_conectado
 
     def mostrarMensaje(self, texto):
-        #cuando tenga interfaz grafica, esto debe modificarse
-        #print str_utf8(texto)
         pass
 
     def miPerfilAttr(self, param):
@@ -82,9 +80,22 @@ class statusNet():
             filtro = "?since_id=" + str(ultimo)
         else:
             filtro = ""
-        open = urllib2.urlopen(self.apibase + '/statuses/replies.json' + filtro)
-        leido = open.read()
-        miTL = json.loads(leido)
+        try:
+            open = urllib2.urlopen(self.apibase + '/statuses/replies.json' + filtro, '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
+            leido = open.read()
+            miTL = json.loads(leido)
+        except urllib2.URLError, e:
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.code()) + str(e.reason))
+            miTL = '{TimeOut}'
+        except urllib2.HTTPError, e1:
+            log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
+            miTL = '{TimeOut}'
+        except socket.timeout, e2:
+            log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
+            miTL = '{TimeOut}'
+        except:
+            log.debug('Error desconocido')
+            miTL = '{Error}'
         return miTL
 
     def Favoritos(self, ultimo=0):
@@ -92,9 +103,22 @@ class statusNet():
             filtro = "?since_id=" + str(ultimo)
         else:
             filtro = ""
-        open = urllib2.urlopen(self.apibase + '/favorites.json' + filtro)
-        leido = open.read()
-        miTL = json.loads(leido)
+        try:
+            open = urllib2.urlopen(self.apibase + '/favorites.json' + filtro, '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
+            leido = open.read()
+            miTL = json.loads(leido)
+        except urllib2.URLError, e:
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.code()) + str(e.reason))
+            miTL = '{TimeOut}'
+        except urllib2.HTTPError, e1:
+            log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
+            miTL = '{TimeOut}'
+        except socket.timeout, e2:
+            log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
+            miTL = '{TimeOut}'
+        except:
+            log.debug('Error desconocido')
+            miTL = '{Error}'
         return miTL
 
     def TimeLineUser(self):  # Esto hay que ARREGLARLO
@@ -113,10 +137,10 @@ class statusNet():
             leido = open.read()
             miTL = json.loads(leido)
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + e.code() + str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.code()) + str(e.reason))
             miTL = '{TimeOut}'
         except urllib2.HTTPError, e1:
-            log.debug('El servidor no pudo procesar la solicitud. Razon: ' + e1.code() + str(e1.reason))
+            log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
             miTL = '{TimeOut}'
         except socket.timeout, e2:
             log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
@@ -124,7 +148,7 @@ class statusNet():
         except:
             log.debug('Error desconocido')
             miTL = '{Error}'
-        
+
         return miTL
 
     def TimeLinePublic(self, ultimo=0):
@@ -132,9 +156,22 @@ class statusNet():
             filtro = "?since_id=" + str(ultimo)
         else:
             filtro = ""
-        open = urllib2.urlopen(self.apibase + '/statuses/public_timeline.json' + filtro)
-        leido = open.read()
-        miTL = json.loads(leido)
+        try:
+            open = urllib2.urlopen(self.apibase + '/statuses/public_timeline.json' + filtro, '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
+            leido = open.read()
+            miTL = json.loads(leido)
+        except urllib2.URLError, e:
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.code()) + str(e.reason))
+            miTL = '{TimeOut}'
+        except urllib2.HTTPError, e1:
+            log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
+            miTL = '{TimeOut}'
+        except socket.timeout, e2:
+            log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
+            miTL = '{TimeOut}'
+        except:
+            log.debug('Error desconocido')
+            miTL = '{Error}'
         return miTL
 
     def Buzon(self, ultimo=0, param=''):
@@ -144,9 +181,22 @@ class statusNet():
         else:
             param = u"/%s" % param
             param.replace("//", "/")
-        open = urllib2.urlopen(self.apibase + '/direct_messages' + param + '.json?since_id=' + str(ultimo))
-        leido = open.read()
-        miTL = json.loads(leido)
+        try:
+            open = urllib2.urlopen(self.apibase + '/direct_messages' + param + '.json?since_id=' + str(ultimo), '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
+            leido = open.read()
+            miTL = json.loads(leido)
+        except urllib2.URLError, e:
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.code()) + str(e.reason))
+            miTL = '{TimeOut}'
+        except urllib2.HTTPError, e1:
+            log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
+            miTL = '{TimeOut}'
+        except socket.timeout, e2:
+            log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
+            miTL = '{TimeOut}'
+        except:
+            log.debug('Error desconocido')
+            miTL = '{Error}'
         return miTL
 
     def Publicar(self, txt):
@@ -155,9 +205,18 @@ class statusNet():
             open = urllib2.urlopen(self.apibase + '/statuses/update.json?%s' % paquete, '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
             leido = open.read()
             log.debug('Enviado: ' + str(leido))
+        except urllib2.URLError, e:
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.code()) + str(e.reason))
+            leido = '{TimeOut}'
+        except urllib2.HTTPError, e1:
+            log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
+            leido = '{TimeOut}'
+        except socket.timeout, e2:
+            log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
+            leido = '{TimeOut}'
         except:
-            leido = "{Error}"
-            log.debug('{Error} Envio Fallido')
+            log.debug('Error desconocido')
+            leido = '{Error}'
         return leido
 
     def PublicarRespuesta(self, txt, en_respuesta):
@@ -166,7 +225,16 @@ class statusNet():
             open = urllib2.urlopen(self.apibase + '/statuses/update.json?%s' % paquete, '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
             leido = open.read()
             log.debug('Enviado: ' + str(leido))
+        except urllib2.URLError, e:
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.code()) + str(e.reason))
+            leido = '{TimeOut}'
+        except urllib2.HTTPError, e1:
+            log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
+            leido = '{TimeOut}'
+        except socket.timeout, e2:
+            log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
+            leido = '{TimeOut}'
         except:
-            leido = "{Error}"
-            log.debug('{Error} Envio Fallido')
+            log.debug('Error desconocido')
+            leido = '{Error}'
         return leido

@@ -17,7 +17,7 @@ from statusnet import *
 
 logging.basicConfig()
 log = logging.getLogger('GUI')
-log.setLevel(logging.DEBUG)
+#log.setLevel(logging.DEBUG)
 
 
 class InterfazPrincipal(wx.Frame):
@@ -43,6 +43,7 @@ class InterfazPrincipal(wx.Frame):
     txtDescripcion = ''
     me = None  # Variable con datos del usuario, no implementada aun
     primeraCargaImg = True
+    carRestantes = 140
     Let_Tahoma_8 = None
     Let_Tahoma_9 = None
     Let_Tahoma_10 = None
@@ -72,13 +73,13 @@ class InterfazPrincipal(wx.Frame):
     def Conectar(self, servidor, usuario, clave):
         log.debug('Creando Coneccion')
         self.red = statusNet(servidor, usuario, clave)
-        if self.red.estaConectado():
+        if self.red.EstaConectado():
             log.debug('Se establecio la Coneccion')
             self.ConfigurarFuentes()
             self.VerificarDirectorios()
             self.ConfigurarVentana()
             self.Actualizar()
-    
+
     def ConfigurarFuentes(self):
         self.Let_Tahoma_16 = wx.Font(16, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
         self.Let_Tahoma_15 = wx.Font(15, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
@@ -89,7 +90,7 @@ class InterfazPrincipal(wx.Frame):
         self.Let_Tahoma_10 = wx.Font(10, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
         self.Let_Tahoma_9 = wx.Font(9, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
         self.Let_Tahoma_8 = wx.Font(8, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
-    
+
     def EnterEstado(self, event):
         self.EnviarMensaje()
 
@@ -99,9 +100,10 @@ class InterfazPrincipal(wx.Frame):
     def EscribeEstado(self, event):
         texto = self.txt_estado.GetValue()
         restante = 140 - len(texto)
+        self.carRestantes = restante
         self.lblCuenta.SetLabel(str(restante))
         event.Skip()
-        
+
     def AtajosTeclado(self, event):
         keycode = event.GetKeyCode()
         if keycode == wx.WXK_F5:
@@ -116,8 +118,13 @@ class InterfazPrincipal(wx.Frame):
         texto = texto.encode('utf8')
         texto = texto.strip()
         if texto != '':
+            if self.carRestantes < 0:
+                wx.MessageBox('No puede exceder los 140 caracteres')
+                return False
+            #
             self.txt_estado.Disable()
             self.btnAceptar.Disable()
+            self.PlayLoaderEnvio()
             self.respuestaEnvio = HiloEnviarMensaje(self, self.servidor, self.usuario, self.clave, texto)
         else:
             wx.MessageBox('Debe ingresar un mensaje')
@@ -143,7 +150,7 @@ class InterfazPrincipal(wx.Frame):
             Lugar = 'Favoritos'
         if origen == 'messages':
             Lugar = 'Mensajes'
-        self.sBar.SetFields((Lugar,'www.plaxed.com / La Primera Red Social Venezolana'))
+        self.sBar.SetFields((Lugar,'Autor: @jrcsdev'))
 
     def DescargarAvatar(self, ruta_img):
         tmp = ruta_img.split("/")
@@ -235,6 +242,7 @@ class InterfazPrincipal(wx.Frame):
     def HiloEnviarMensaje(self, msj):
         respuesta = msj.data
         log.debug('Respuesta del Hilo "Enviar Mensaje": ' + respuesta)
+        self.StopLoaderEnvio()
         if respuesta == "TimeOut":
             log.debug('Reintente el envio nuevamente')
             self.txt_estado.Enable()
@@ -293,7 +301,7 @@ class InterfazPrincipal(wx.Frame):
         if url_servidor != app_servidor:
             wx.LaunchDefaultBrowser(link)
             return False
-        
+
         url_tipo = arreglo[3]
         #
         if url_tipo == 'tag':
@@ -351,6 +359,12 @@ class InterfazPrincipal(wx.Frame):
     def VentanaRespuestaCancel(self):
         pass
 
+    def PlayLoaderEnvio(self):
+        self.loaderEnvio.Play()
+
+    def StopLoaderEnvio(self):
+        self.loaderEnvio.Stop()
+
     def ConfigurarVentana(self):
         Publisher().subscribe(self.TL_Mensajes, "TL_Mensajes")
         Publisher().subscribe(self.TL_Vacio, "TL_Vacio")
@@ -385,20 +399,25 @@ class InterfazPrincipal(wx.Frame):
 
         usr_nombre = self.red.miPerfilAttr('screen_name')
         self.lblUsuario = wx.StaticText(self.panel, wx.ID_ANY, usr_nombre, wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.lblUsuario.SetFont( wx.Font( wx.NORMAL_FONT.GetPointSize(), 70, 90, 92, False, wx.EmptyString ) )
         self.lblUsuario.Wrap(-1)
-        self.lblUsuario.SetFont(self.Let_Tahoma_16)
+        self.lblUsuario.SetFont(self.Let_Tahoma_14)
 
         self.txtDescripcion = self.red.miPerfilAttr('description')
-        usr_descripcion = ''
-        self.lblDescripcion = wx.StaticText(self.panel, wx.ID_ANY, usr_descripcion, wx.DefaultPosition, wx.DefaultSize, 0 )
+        usr_descripcion = self.txtDescripcion
+        self.lblDescripcion = wx.StaticText(self.panel, wx.ID_ANY, usr_descripcion, wx.DefaultPosition, (-1,25), 0 )
         self.lblDescripcion.SetFont(self.Let_Tahoma_8)
-        #self.lblDescripcion.SetFont( wx.Font(7, 70, 90, wx.NORMAL, False, wx.EmptyString ) )
 
         self.v_sizerInfo.Add(self.lblUsuario, 0, wx.TOP|wx.LEFT, 5 )
-        self.v_sizerInfo.Add(self.lblDescripcion, 1, wx.EXPAND|wx.BOTTOM|wx.LEFT, 5 )
+        self.v_sizerInfo.Add(self.lblDescripcion, 1, wx.EXPAND|wx.LEFT, 2 )
 
-        self.h_sizerPerfil.Add(self.v_sizerInfo, 0, wx.ALL|wx.EXPAND, 0 )
+
+        self.h_sizerPerfil.Add(self.v_sizerInfo, 1, wx.ALL|wx.EXPAND, 0 )
+        #agregar Loader de Envio
+        loaderEnvioRuta = 'img/loader_envio.gif'
+        self.loaderEnvio = wx.animate.GIFAnimationCtrl(self.panel, -1, loaderEnvioRuta, pos=(-1, -1))
+        self.h_sizerPerfil.Add(self.loaderEnvio, 0, wx.ALIGN_TOP, 0)
+        self.loaderEnvio.GetPlayer().UseBackgroundColour(True)
+
 
         #configurando la fila de estado
         self.h_sizer1 = wx.BoxSizer(wx.HORIZONTAL)
@@ -420,7 +439,7 @@ class InterfazPrincipal(wx.Frame):
         self.panel.Bind(wx.EVT_BUTTON, self.BotonEstado, self.btnAceptar)
         self.txt_estado.Bind(wx.EVT_TEXT, self.EscribeEstado)
         self.txt_estado.Bind(wx.EVT_KEY_DOWN, self.AtajosTeclado)
-        self.Bind(wx.EVT_SIZE, self.RedimensionVentana)
+        #self.Bind(wx.EVT_SIZE, self.RedimensionVentana)
 
         #Barra de Herramientas
         self.h_sizerBarra = wx.BoxSizer(wx.HORIZONTAL)
@@ -625,7 +644,7 @@ class PlaxedLogin(wx.Frame):
     def Conectar(self, servidor, usuario, clave):
         log.debug('Verificando Sesion')
         self.red = statusNet(servidor, usuario, clave)
-        if self.red.estaConectado():
+        if self.red.EstaConectado():
             log.debug('Credenciales Validas')
             self.Validado = True
         else:
@@ -728,7 +747,7 @@ class HiloTimeLine(threading.Thread):
 
     def run(self):
         self.red = statusNet(self.servidor, self.usuario, self.clave)
-        if self.red.estaConectado():
+        if self.red.EstaConectado():
             self.dir_usuario = self.dir_perfiles + str(self.red.miPerfilAttr('id'))
             self.dir_imagenes = self.dir_usuario + '/imagenes/'
             log.debug("Solicitando Datos del Servidor")
@@ -939,7 +958,7 @@ class HiloEnviarMensaje(threading.Thread):
 
     def run(self):
         self.red = statusNet(self.servidor, self.usuario, self.clave)
-        if self.red.estaConectado():
+        if self.red.EstaConectado():
             if self.directo:
                 res = self.red.PublicarRespuesta(self.txt, self.idmensaje)
                 if res == "{TimeOut}":
@@ -963,21 +982,44 @@ class HiloEnviarMensaje(threading.Thread):
 class VentanaResponder(wx.Frame):
 
     idmensaje = 0
+    carRestantes = 140
     def __init__(self, parent, destinatario):
         wx.Frame.__init__(self, parent=parent, id=-1, title='Responder', size=(340,150), style=wx.FRAME_FLOAT_ON_PARENT | wx.CAPTION | wx.FRAME_TOOL_WINDOW | wx.SYSTEM_MENU| wx.CLOSE_BOX)
         self.parent = parent
         self.panel = wx.Panel(self, -1)
-        self.bz_vertical = wx.BoxSizer(wx.VERTICAL)
+        self.bs_vertical = wx.BoxSizer(wx.VERTICAL)
         self.txtRespuesta = wx.TextCtrl(self.panel, wx.ID_ANY, '', (-1, -1), (-1, 50), style=wx.TE_MULTILINE|wx.TE_NO_VSCROLL|wx.TE_PROCESS_ENTER)
+        Let_Tahoma_10 = wx.Font(10, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
+        self.txtRespuesta.SetFont(Let_Tahoma_10)
         self.btnAceptar = wx.Button(self.panel, -1,'Enviar')
-        self.bz_vertical.Add(self.txtRespuesta, 1, wx.LEFT|wx.TOP|wx.RIGHT|wx.EXPAND, 5)
-        self.bz_vertical.Add(self.btnAceptar, 0, wx.ALL|wx.ALIGN_RIGHT, 5)
+        self.bs_vertical.Add(self.txtRespuesta, 1, wx.LEFT|wx.TOP|wx.RIGHT|wx.EXPAND, 5)
+        #
+        self.bs_horizontal = wx.BoxSizer(wx.HORIZONTAL)
+        loaderEnvioRuta = 'img/loader_envio.gif'
+        self.loaderEnvio = wx.animate.GIFAnimationCtrl(self.panel, -1, loaderEnvioRuta, pos=(-1, -1))
+        self.bs_horizontal.Add(self.loaderEnvio, 1, wx.ALL|wx.ALIGN_BOTTOM, 0)
+        self.loaderEnvio.GetPlayer().UseBackgroundColour(True)
+        #
+        self.lblCuenta = wx.StaticText(self.panel, wx.ID_ANY, '140', wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.bs_horizontal.Add(self.lblCuenta, 0, wx.ALL|wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL, 2)
 
-        self.panel.SetSizer(self.bz_vertical)
+        self.bs_horizontal.Add(self.btnAceptar, 0, wx.ALL|wx.ALIGN_RIGHT, 2)
+        self.bs_vertical.Add(self.bs_horizontal, 0, wx.ALL|wx.EXPAND, 0)
 
+        self.panel.SetSizer(self.bs_vertical)
+        #
         self.btnAceptar.Bind(wx.EVT_BUTTON, self.OnOK)
+        self.txtRespuesta.Bind(wx.EVT_TEXT, self.Escribiendo)
+        #
         self.destinatario = destinatario
         self.ConfigurarVentana()
+
+    def Escribiendo(self, evt):
+        texto = self.txtRespuesta.GetValue()
+        restante = 140 - len(texto)
+        self.carRestantes = restante
+        self.lblCuenta.SetLabel(str(restante))
+        evt.Skip()
 
     def ConfigurarVentana(self):
         self.Bind(wx.EVT_CLOSE, self.CerrandoVentana)
@@ -996,24 +1038,30 @@ class VentanaResponder(wx.Frame):
         self.txtRespuesta.SetFocus()
 
     def OnOK(self, event):
-        self.Bloquear(True)
         texto = self.txtRespuesta.GetValue()
         texto = texto.encode('utf8')
         texto = texto.strip()
         if texto == '':
             wx.MessageBox('Debe ingresar un mensaje')
-            self.Bloquear(False)
+            self.txtRespuesta.SetFocus()
         else:
+            if self.carRestantes < 0:
+                wx.MessageBox('No puede exceder los 140 caracteres')
+                self.txtRespuesta.SetFocus()
+                return False
+            self.Bloquear(True)
             self.callback(texto, self.idmensaje)
 
     def Bloquear(self, bloquear):
         if bloquear:
             self.txtRespuesta.Disable()
             self.btnAceptar.Disable()
+            self.loaderEnvio.Play()
         else:
             self.txtRespuesta.Enable()
             self.btnAceptar.Enable()
             self.txtRespuesta.SetFocus()
+            self.loaderEnvio.Stop()
 
 
     def CerrandoVentana(self, event):
