@@ -8,7 +8,7 @@ import socket
 
 logging.basicConfig()
 log = logging.getLogger('StatusNET')
-#log.setLevel(logging.DEBUG)
+log.setLevel(logging.DEBUG)
 
 
 class statusNet():

@@ -17,7 +17,7 @@ from statusnet import *
 
 logging.basicConfig()
 log = logging.getLogger('GUI')
-#log.setLevel(logging.DEBUG)
+log.setLevel(logging.DEBUG)
 
 
 class InterfazPrincipal(wx.Frame):
@@ -214,14 +214,6 @@ class InterfazPrincipal(wx.Frame):
             self.timer = threading.Timer(self.intervaloTL, self.Actualizar)
         self.timer.start()
 
-
-    def RedimensionVentana(self, event):
-        tamano = self.GetSize()
-        ancho = tamano[0] + 100
-        texto = wordwrap(self.txtDescripcion, ancho, wx.ClientDC(self))
-        self.lblDescripcion.SetLabel(texto)
-        event.Skip()
-
     def TL_Mensajes(self, msj):
         log.debug('****SE RECIBIERON MENSAJES DEL THREAD****')
         if self.primeraCargaImg:
@@ -404,18 +396,20 @@ class InterfazPrincipal(wx.Frame):
 
         self.txtDescripcion = self.red.miPerfilAttr('description')
         usr_descripcion = self.txtDescripcion
+        if usr_descripcion == None:
+            usr_descripcion = u'(Sin Descripción)'
         self.lblDescripcion = wx.StaticText(self.panel, wx.ID_ANY, usr_descripcion, wx.DefaultPosition, (-1,25), 0 )
         self.lblDescripcion.SetFont(self.Let_Tahoma_8)
 
         self.v_sizerInfo.Add(self.lblUsuario, 0, wx.TOP|wx.LEFT, 5 )
         self.v_sizerInfo.Add(self.lblDescripcion, 1, wx.EXPAND|wx.LEFT, 2 )
 
-
         self.h_sizerPerfil.Add(self.v_sizerInfo, 1, wx.ALL|wx.EXPAND, 0 )
+
         #agregar Loader de Envio
         loaderEnvioRuta = 'img/loader_envio.gif'
         self.loaderEnvio = wx.animate.GIFAnimationCtrl(self.panel, -1, loaderEnvioRuta, pos=(-1, -1))
-        self.h_sizerPerfil.Add(self.loaderEnvio, 0, wx.ALIGN_TOP, 0)
+        self.h_sizerPerfil.Add(self.loaderEnvio, 0, wx.RIGHT|wx.TOP|wx.ALIGN_TOP, 5)
         self.loaderEnvio.GetPlayer().UseBackgroundColour(True)
 
 
@@ -439,7 +433,6 @@ class InterfazPrincipal(wx.Frame):
         self.panel.Bind(wx.EVT_BUTTON, self.BotonEstado, self.btnAceptar)
         self.txt_estado.Bind(wx.EVT_TEXT, self.EscribeEstado)
         self.txt_estado.Bind(wx.EVT_KEY_DOWN, self.AtajosTeclado)
-        #self.Bind(wx.EVT_SIZE, self.RedimensionVentana)
 
         #Barra de Herramientas
         self.h_sizerBarra = wx.BoxSizer(wx.HORIZONTAL)
@@ -791,55 +784,67 @@ class HiloTimeLine(threading.Thread):
                     else:
                         img_ruta_local = self.app_dir_img + 'default.png'
 
-                    tmp = tmp + '<table bgcolor="' + self.color_tab + '" width="100%" border="0"><tr><td width="48" valign="top"><img align="left" src="' + img_ruta_local + '"></td><td valign="top">'
+                    tmp += '<table bgcolor="' + self.color_tab + '" width="100%" border="0">'
+                    tmp += '<tr>'
+                    tmp += '<td width="48" valign="top" rowspan="2"><img align="left" src="' + img_ruta_local + '"></td>'
+                    tmp += '<td valign="top">'
                     if self.time_line == 'messages':
-                        tmp = tmp + '<font size="2"><b>' + tl[usuario1 +'_screen_name'] + '</b><br>'
+                        tmp += '<font size="2"><b>' + tl[usuario1 +'_screen_name'] + '</b><br>'
                     else:
-                        tmp = tmp + '<font size="2"><b>' + tl[usuario1]['screen_name'] + '</b><br>'
+                        tmp += '<font size="2"><b>' + tl[usuario1]['screen_name'] + '</b><br>'
                     #
-                    fila_info = []
-                    fila_info.append('<br>')
-                    fila_info.append('<font size="1" color="gray">')
-                    if self.time_line != 'messages':
-                        if tl['in_reply_to_user_id'] != None:
-                            html = 'En respuesta a <i>' + tl['in_reply_to_screen_name'] +  '</i>'
-                            fila_info.append(html)
-                    #
-                    if self.time_line!= 'messages':
-                        html = u'Vía %s' % tl['source']
-                        fila_info.append(html)
-                        #
-                        html = '<a href="%s/notice/new/%s/%s">Responder</a>' % (self.servidor, tl[usuario1]['screen_name'], tl['id'])
-                        fila_info.append(html)
-                        # si es mi tweet, puedo borrar, si no, puedo repetir
-                        if self.red.miPerfilAttr('id')!=tl[usuario1]['id']:
-                            html = '<a href="%s/notice/retweet/%s">Repetir</a>' % (self.servidor, tl['id'])
-                            fila_info.append(html)
-                        else:
-                            html = '<a href="%s/notice/delete/%s">Borrar</a>' % (self.servidor, tl['id'])
-                            fila_info.append(html)
-
-                        html = '<a href="%s/favorites/create/%s">Favorito</a>' % (self.servidor, tl['id'])
-                        fila_info.append(html)
-
-                        html = '<a href="%s/conversation/%s">Contexto</a>' % (self.servidor, tl['statusnet_conversation_id'])
-                        fila_info.append(html)
-
-                        #log.debug(str(tl['statusnet_conversation_id']))
-
-                    fila_info.append('</font>')
-
                     if self.time_line == 'messages':
                         msj = tl['text']
                     else:
                         msj = tl['statusnet_html']
+
                     tmp = u"%s %s</font>" % (tmp, msj) #text o statusnet_html
-                    cantidad=len(fila_info)
-                    for i in range(0,cantidad):
-                        if i>2 and i < (cantidad-1):
-                            tmp += ' / '
-                        tmp += unicode(fila_info[i])
-                    tmp += '</td></tr></table>'
+                    tmp += '</td>'
+                    tmp += '</tr>'
+                    #
+                    tmp += '<tr>'
+                    tmp += '<td align="right" valign="top">'
+                    tmp += '<font size="1" color="gray">'
+
+
+                    #tmp += '</font>'
+                    #tmp +='</td>'
+                    #tmp += '</tr>'
+                    #
+                    #tmp += '<tr>'
+                    #tmp +='<td valign="top" align="right">'
+                    #tmp += '<font size="1" color="gray">'
+                    #tmp += '<br>'
+                    #
+                    if self.time_line!= 'messages':
+
+                        tmp += '<a href="%s/notice/new/%s/%s"><img src="img/link_responder.png"></a>' % (self.servidor, tl[usuario1]['screen_name'], tl['id'])
+
+                        # si es mi tweet, puedo borrar, si no, puedo repetir
+                        if self.red.miPerfilAttr('id')!=tl[usuario1]['id']:
+                            tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/notice/retweet/%s"><img src="img/link_repetir.png"></a>' % (self.servidor, tl['id'])
+
+                        else:
+                            tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/notice/delete/%s"><img src="img/link_borrar.gif"></a>' % (self.servidor, tl['id'])
+
+
+                        tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/favorites/create/%s"><img src="img/link_favorito.png"></a>' % (self.servidor, tl['id'])
+
+
+                        tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/conversation/%s"><img src="img/link_contexto.png"></a>' % (self.servidor, tl['statusnet_conversation_id'])
+                    #
+                    tmp += '<br>'
+                    if self.time_line != 'messages':
+                        tmp += u'Vía %s' % tl['source']
+                        if tl['in_reply_to_user_id'] != None:
+                            tmp += ', en respuesta a <i>' + tl['in_reply_to_screen_name'] +  '</i>'
+                    #
+                    tmp += '</font>'
+                    tmp += '</td>'
+                    tmp += '</tr>'
+                    tmp += '</table>'
+
+
                     #
                     if ultimo == 0:
                         ultimo = tl['id']
