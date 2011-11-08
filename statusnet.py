@@ -4,6 +4,7 @@ import urllib2
 from urllib import urlencode
 from base.base import *
 import logging
+import socket
 
 logging.basicConfig()
 log = logging.getLogger('StatusNET')
@@ -52,6 +53,10 @@ class statusNet():
         except urllib2.URLError, e:
             log.debug('Sin respuesta del servidor. Razon: '+ str(e.reason))
             self.respuesta_login = '{TimeOut}'
+        except socket.timeout, e2:
+            log.debug('El Socket devolvio un TimeOut')
+            miTL = '{TimeOut}'
+            wx.MessageBox('Error del Socket ' + str(e2))
         except:
             log.debug('Error no identificado')
             self.respuesta_login = '{Error}'
@@ -108,8 +113,18 @@ class statusNet():
             leido = open.read()
             miTL = json.loads(leido)
         except urllib2.URLError, e:
-            log.debug('Sin respuesta del servidor. Razon: '+ str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + e.code() + str(e.reason))
             miTL = '{TimeOut}'
+        except urllib2.HTTPError, e1:
+            log.debug('El servidor no pudo procesar la solicitud. Razon: ' + e1.code() + str(e1.reason))
+            miTL = '{TimeOut}'
+        except socket.timeout, e2:
+            log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
+            miTL = '{TimeOut}'
+        except:
+            log.debug('Error desconocido')
+            miTL = '{Error}'
+        
         return miTL
 
     def TimeLinePublic(self, ultimo=0):

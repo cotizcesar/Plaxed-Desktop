@@ -43,6 +43,15 @@ class InterfazPrincipal(wx.Frame):
     txtDescripcion = ''
     me = None  # Variable con datos del usuario, no implementada aun
     primeraCargaImg = True
+    Let_Tahoma_8 = None
+    Let_Tahoma_9 = None
+    Let_Tahoma_10 = None
+    Let_Tahoma_11 = None
+    Let_Tahoma_12 = None
+    Let_Tahoma_13 = None
+    Let_Tahoma_14 = None
+    Let_Tahoma_15 = None
+    Let_Tahoma_16 = None
 
     def __init__(self, parent, titulo, servidor, usuario, clave):
         self.parent = parent
@@ -65,20 +74,38 @@ class InterfazPrincipal(wx.Frame):
         self.red = statusNet(servidor, usuario, clave)
         if self.red.estaConectado():
             log.debug('Se establecio la Coneccion')
+            self.ConfigurarFuentes()
             self.VerificarDirectorios()
             self.ConfigurarVentana()
             self.Actualizar()
-
+    
+    def ConfigurarFuentes(self):
+        self.Let_Tahoma_16 = wx.Font(16, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
+        self.Let_Tahoma_15 = wx.Font(15, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
+        self.Let_Tahoma_14 = wx.Font(14, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
+        self.Let_Tahoma_13 = wx.Font(13, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
+        self.Let_Tahoma_12 = wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
+        self.Let_Tahoma_11 = wx.Font(11, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
+        self.Let_Tahoma_10 = wx.Font(10, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
+        self.Let_Tahoma_9 = wx.Font(9, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
+        self.Let_Tahoma_8 = wx.Font(8, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
+    
     def EnterEstado(self, event):
         self.EnviarMensaje()
 
     def BotonEstado(self, event):
         self.EnviarMensaje()
 
-    def TeclaF10(self, event):
+    def EscribeEstado(self, event):
+        texto = self.txt_estado.GetValue()
+        restante = 140 - len(texto)
+        self.lblCuenta.SetLabel(str(restante))
+        event.Skip()
+        
+    def AtajosTeclado(self, event):
         keycode = event.GetKeyCode()
-        if keycode == wx.WXK_F10:
-            log.debug('F10: Enviar Mensaje')
+        if keycode == wx.WXK_F5:
+            log.debug('F5: Enviar Mensaje')
             self.EnviarMensaje()
         else:
             event.Skip()
@@ -259,15 +286,16 @@ class InterfazPrincipal(wx.Frame):
     def LinkPresionado(self, msj):
         link = self.cols[0].enlace
         arreglo = link.split('/')
-        url_tipo = arreglo[3]
         url_servidor=arreglo[2]
-        #
         arreglo1 = self.servidor.split('/')
         app_servidor = arreglo1[2]
-
+        #
         if url_servidor != app_servidor:
             wx.LaunchDefaultBrowser(link)
-
+            return False
+        
+        url_tipo = arreglo[3]
+        #
         if url_tipo == 'tag':
             wx.MessageBox(u'Los tags no están implementados todavía')
             return False
@@ -359,11 +387,13 @@ class InterfazPrincipal(wx.Frame):
         self.lblUsuario = wx.StaticText(self.panel, wx.ID_ANY, usr_nombre, wx.DefaultPosition, wx.DefaultSize, 0 )
         self.lblUsuario.SetFont( wx.Font( wx.NORMAL_FONT.GetPointSize(), 70, 90, 92, False, wx.EmptyString ) )
         self.lblUsuario.Wrap(-1)
+        self.lblUsuario.SetFont(self.Let_Tahoma_16)
 
         self.txtDescripcion = self.red.miPerfilAttr('description')
         usr_descripcion = ''
         self.lblDescripcion = wx.StaticText(self.panel, wx.ID_ANY, usr_descripcion, wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.lblDescripcion.SetFont( wx.Font(7, 70, 90, wx.NORMAL, False, wx.EmptyString ) )
+        self.lblDescripcion.SetFont(self.Let_Tahoma_8)
+        #self.lblDescripcion.SetFont( wx.Font(7, 70, 90, wx.NORMAL, False, wx.EmptyString ) )
 
         self.v_sizerInfo.Add(self.lblUsuario, 0, wx.TOP|wx.LEFT, 5 )
         self.v_sizerInfo.Add(self.lblDescripcion, 1, wx.EXPAND|wx.BOTTOM|wx.LEFT, 5 )
@@ -373,16 +403,23 @@ class InterfazPrincipal(wx.Frame):
         #configurando la fila de estado
         self.h_sizer1 = wx.BoxSizer(wx.HORIZONTAL)
         self.txt_estado = wx.TextCtrl(self.panel, wx.ID_ANY, '', (-1, -1), (-1, 50), style=wx.TE_MULTILINE|wx.TE_NO_VSCROLL|wx.TE_PROCESS_ENTER)
+        self.txt_estado.SetFont(self.Let_Tahoma_10)
         self.h_sizer1.Add(self.txt_estado, 1, wx.ALL|wx.EXPAND, 5)
+        #
+        self.v_sizer3 = wx.BoxSizer(wx.VERTICAL) # Este contiene el boton y el label que cuenta
         self.btnAceptar = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/aceptar.png", wx.BITMAP_TYPE_ANY ), pos=wx.DefaultPosition, size=(40,25), style=wx.BU_AUTODRAW )
-        self.btnAceptar.SetToolTipString(u'Enviar (F10)')
-        self.h_sizer1.Add(self.btnAceptar, 0, wx.ALL, 5)
+        self.btnAceptar.SetToolTipString(u'Enviar (F5)')
+        self.lblCuenta = wx.StaticText(self.panel, wx.ID_ANY, '140', wx.DefaultPosition, wx.DefaultSize, 0 )
+        #self.lblCuenta.SetFont( wx.Font(10, 70, 90, wx.NORMAL, False, wx.EmptyString ) )
+        self.lblCuenta.SetFont(self.Let_Tahoma_10)
+        self.v_sizer3.Add(self.btnAceptar, 0, wx.ALL, 5)
+        self.v_sizer3.Add(self.lblCuenta, 0, wx.ALL, 5)
+        self.h_sizer1.Add(self.v_sizer3, 0, 0, 5)
 
         #Configurando eventos
         self.panel.Bind(wx.EVT_BUTTON, self.BotonEstado, self.btnAceptar)
-        #self.panel.Bind(wx.EVT_TEXT_ENTER, self.EnterEstado, self.txt_estado) # Se envia mensaje con ENTER
-        #self.panel.Bind(wx.EVT_KEY_DOWN, self.TeclaF10, self.txt_estado)
-        self.txt_estado.Bind(wx.EVT_KEY_DOWN, self.TeclaF10)
+        self.txt_estado.Bind(wx.EVT_TEXT, self.EscribeEstado)
+        self.txt_estado.Bind(wx.EVT_KEY_DOWN, self.AtajosTeclado)
         self.Bind(wx.EVT_SIZE, self.RedimensionVentana)
 
         #Barra de Herramientas
@@ -501,10 +538,11 @@ class MiHtmlWindow(wx.html.HtmlWindow):
         wx.html.HtmlWindow.__init__(self,parent, id, size=size)
         if "gtk2" in wx.PlatformInfo:
             self.SetStandardFonts()
+        _FONT_SIZES = [5, 6,  8, 10, 14, 20, 24]
+        # Original font sizes are [7, 8, 10, 12, 16, 22, 30]
+        self.SetFonts("Tahoma", "Courier New", _FONT_SIZES)
 
     def OnLinkClicked(self, link):
-        #wx.LaunchDefaultBrowser(link.GetHref())
-        #wx.MessageBox(link.GetHref())
         evento = link.GetEvent()
         if evento.Button != 1:
             return False
@@ -926,13 +964,13 @@ class VentanaResponder(wx.Frame):
 
     idmensaje = 0
     def __init__(self, parent, destinatario):
-        wx.Frame.__init__(self, parent=parent, id=-1, title='Responder', size=(250,150), style=wx.FRAME_FLOAT_ON_PARENT | wx.CAPTION | wx.FRAME_TOOL_WINDOW | wx.SYSTEM_MENU| wx.CLOSE_BOX)
+        wx.Frame.__init__(self, parent=parent, id=-1, title='Responder', size=(340,150), style=wx.FRAME_FLOAT_ON_PARENT | wx.CAPTION | wx.FRAME_TOOL_WINDOW | wx.SYSTEM_MENU| wx.CLOSE_BOX)
         self.parent = parent
         self.panel = wx.Panel(self, -1)
         self.bz_vertical = wx.BoxSizer(wx.VERTICAL)
         self.txtRespuesta = wx.TextCtrl(self.panel, wx.ID_ANY, '', (-1, -1), (-1, 50), style=wx.TE_MULTILINE|wx.TE_NO_VSCROLL|wx.TE_PROCESS_ENTER)
         self.btnAceptar = wx.Button(self.panel, -1,'Enviar')
-        self.bz_vertical.Add(self.txtRespuesta, 1, wx.EXPAND, 5)
+        self.bz_vertical.Add(self.txtRespuesta, 1, wx.LEFT|wx.TOP|wx.RIGHT|wx.EXPAND, 5)
         self.bz_vertical.Add(self.btnAceptar, 0, wx.ALL|wx.ALIGN_RIGHT, 5)
 
         self.panel.SetSizer(self.bz_vertical)
