@@ -1,5 +1,5 @@
 # -*- coding: utf-8 *-*
-from urllib import quote
+
 #Variables GLOBALES
 APLICACION_VENTANA_TITULO = 'Plaxed Desktop (Pre-Alpha)'
 APLICACION_SOURCE =  "Plaxed Desktop (Pre-Alpha)"

@@ -558,7 +558,7 @@ class MiHtmlWindow(wx.html.HtmlWindow):
 
     def OnLinkClicked(self, link):
         #
-        #wx.MessageBox(str(self.GetVirtualSize()[0]))
+        #wx.MessageBox(str(self.GetScrollRange(wx.VERTICAL)))
         #return False
         #
         evento = link.GetEvent()
@@ -566,13 +566,13 @@ class MiHtmlWindow(wx.html.HtmlWindow):
             return False
         self.enlace = link.GetHref()
         wx.CallAfter(Publisher().sendMessage, "LinkPresionado", "Final de Thread")
-    
+
     def GetBottom(self):
-        bottom = self.GetBestSize()[1]-self.GetViewStart()[1]
+        bottom = self.GetScrollRange(wx.VERTICAL)-self.GetViewStart()[1]
         return bottom
-    
+
     def SetBottom(self, param):
-        bottom = self.GetBestSize()[1]-param
+        bottom = self.GetScrollRange(wx.VERTICAL)-param
         self.Scroll(0, bottom)
 
 class cColumna(MiHtmlWindow):
