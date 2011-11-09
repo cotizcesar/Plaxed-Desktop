@@ -84,7 +84,7 @@ class statusNet():
             leido = open.read()
             miTL = json.loads(leido)
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.code()) + str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.reason))
             miTL = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
@@ -107,7 +107,7 @@ class statusNet():
             leido = open.read()
             miTL = json.loads(leido)
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.code()) + str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.reason))
             miTL = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
@@ -136,7 +136,7 @@ class statusNet():
             leido = open.read()
             miTL = json.loads(leido)
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.code()) + str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.reason))
             miTL = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
@@ -160,7 +160,7 @@ class statusNet():
             leido = open.read()
             miTL = json.loads(leido)
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.code()) + str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.reason))
             miTL = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
@@ -185,7 +185,7 @@ class statusNet():
             leido = open.read()
             miTL = json.loads(leido)
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.code()) + str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.reason))
             miTL = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
@@ -205,7 +205,7 @@ class statusNet():
             leido = open.read()
             log.debug('Enviado: ' + str(leido))
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.code()) + str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.reason))
             leido = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
@@ -225,7 +225,7 @@ class statusNet():
             leido = open.read()
             log.debug('Enviado: ' + str(leido))
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.code()) + str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.reason))
             leido = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
