@@ -243,7 +243,8 @@ class InterfazPrincipal(wx.Frame):
         log.debug('Respuesta del Hilo "Enviar Mensaje": ' + respuesta)
         self.StopLoaderEnvio()
         if respuesta == "TimeOut":
-            log.debug('Reintente el envio nuevamente')
+            log.debug('El servidor no respondio a tiempo')
+            wx.MessageBox(u'El servidor no respondió, se desconoce si el mensaje fue enviado')
             self.txt_estado.Enable()
             self.btnAceptar.Enable()
         if respuesta == "MensajeEnviado":
@@ -264,9 +265,9 @@ class InterfazPrincipal(wx.Frame):
         respuesta = msj.data
         log.debug('Respuesta del Hilo "Enviar Mensaje": ' + respuesta)
         if respuesta == "TimeOut":
-            log.debug('Reintente el envio nuevamente')
+            log.debug('El servidor no respondio a tiempo')
             self.vtnRespuesta.Bloquear(False)
-            wx.MessageBox(u'El servidor no respondió, intente de nuevo')
+            wx.MessageBox(u'El servidor no respondió, se desconoce si el mensaje fue enviado')
         if respuesta == "MensajeEnviado":
             log.debug('Mensaje Directo Enviado')
             self.vtnRespuesta.Destroy()
@@ -1081,10 +1082,12 @@ class VentanaResponder(wx.Frame):
 
     def Bloquear(self, bloquear):
         if bloquear:
+            self.Disable()
             self.txtRespuesta.Disable()
             self.btnAceptar.Disable()
             self.loaderEnvio.Play()
         else:
+            self.Enable()
             self.txtRespuesta.Enable()
             self.btnAceptar.Enable()
             self.txtRespuesta.SetFocus()
