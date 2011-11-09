@@ -2,15 +2,15 @@
 import wx
 import wx.html
 import wx.animate
-from wx.lib.wordwrap import wordwrap
+#from wx.lib.wordwrap import wordwrap
 import threading
 from wx.lib.pubsub import Publisher
 import httplib
-import sys
+#import sys
 import os
 import datetime
 import time
-import getpass
+#import getpass
 import logging
 import re
 from statusnet import *
@@ -22,7 +22,7 @@ log.setLevel(logging.DEBUG)
 
 class InterfazPrincipal(wx.Frame):
 
-    tls = ['tl_home','tl_public','replies','favorites','messages']
+    tls = ['tl_home', 'tl_public', 'replies', 'favorites', 'messages']
     cols = []
     ultimo = []
     cols_vacia = []
@@ -30,6 +30,7 @@ class InterfazPrincipal(wx.Frame):
     indiceActual = 0
     red = None
     txt = []
+    scrollBottom = []
     timer = None  # El timer de actualizar
     dir_perfiles = './perfiles/'
     dir_usuario = ''
@@ -134,9 +135,11 @@ class InterfazPrincipal(wx.Frame):
 
     def InnerHTML(self, txt):
         log.debug("Inyectando HTML")
-        bottom=self.cols[0].GetBottom()
+        #bottom=self.cols[0].GetBottom()
+
         self.cols[0].SetPage(txt)
-        self.cols[0].SetBottom(bottom)
+        if self.scrollBottom[self.indiceActual] != -1:
+            self.cols[0].SetBottom(self.scrollBottom[self.indiceActual])
         log.debug("Finalizando Inyeccion HTML")
 
     def ActualizaBarraEstado(self):
@@ -225,7 +228,9 @@ class InterfazPrincipal(wx.Frame):
             self.txt[self.indiceActual] = self.respuestaTL.txt
         else:
             self.txt[self.indiceActual] = self.respuestaTL.txt + self.txt[self.indiceActual]
+            self.scrollBottom[self.indiceActual] = self.cols[0].GetBottom()
         self.cols_vacia[self.indiceActual] = False
+
         self.InnerHTML(self.txt[self.indiceActual])
 
         self.ActualizarTimer()
@@ -374,6 +379,7 @@ class InterfazPrincipal(wx.Frame):
             self.txt.append('')
             self.ultimo.append(0)
             self.cols_vacia.append(True)
+            self.scrollBottom.append(-1)
         log.debug('Configurando Ventana')
         icono = wx.Icon('img/iconosolo16.png', wx.BITMAP_TYPE_PNG)
         self.SetIcon(icono)
@@ -504,7 +510,8 @@ class InterfazPrincipal(wx.Frame):
         if indiceNuevo == indiceViejo:
             log.debug('Seleccionando mismo TL. Se ignora cambio')
             return False
-
+        #
+        self.scrollBottom[indiceViejo] = self.cols[0].GetBottom()
         self.indiceActual = indiceNuevo
         self.cols[0].SetOrigen(self.tls[self.indiceActual])
 
@@ -514,6 +521,7 @@ class InterfazPrincipal(wx.Frame):
         if self.cols_vacia[self.indiceActual] == True:
             self.InnerHTML(self.html_loader_tl)
         else:
+            #self.scrollBottom[self.indiceActual] = self.cols[0].GetBottom()
             self.InnerHTML(self.txt[self.indiceActual])
 
         try:
@@ -558,7 +566,7 @@ class MiHtmlWindow(wx.html.HtmlWindow):
 
     def OnLinkClicked(self, link):
         #
-        #wx.MessageBox(str(self.GetScrollRange(wx.VERTICAL)))
+        #wx.MessageBox(str(self.GetScrollPixelsPerUnit()[0]))
         #return False
         #
         evento = link.GetEvent()
@@ -572,7 +580,7 @@ class MiHtmlWindow(wx.html.HtmlWindow):
         return bottom
 
     def SetBottom(self, param):
-        bottom = self.GetScrollRange(wx.VERTICAL)-param
+        bottom = (self.GetScrollRange(wx.VERTICAL)-param)
         self.Scroll(0, bottom)
 
 class cColumna(MiHtmlWindow):
@@ -1093,7 +1101,6 @@ class PlaxedApp(wx.App):
     usuario = ''
     clave = ''
     servidor = ''
-    frmMain = None
 
     def __init__(self):
         wx.App.__init__(self, True)
