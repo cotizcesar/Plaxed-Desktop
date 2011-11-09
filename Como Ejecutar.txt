@@ -1,10 +1,10 @@
 [Windows]
 
-Para ejecutar, doble click al archivo: plaxed.bat
+Para ejecutar, doble click al archivo: runwindows.bat
 
 [Linux]
 
-Para ejecutar, doble click al archivo: plaxed.sh
+Para ejecutar, doble click al archivo: runlinux.sh
 
 
 Cualquier duda, contáctame al jrcsdev@gmail.com o síguente en twitter: @jrcsdev
