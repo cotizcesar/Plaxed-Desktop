@@ -71,6 +71,20 @@ class InterfazPrincipal(wx.Frame):
         log.debug('Terminando Aplicacion')
         self.parent.Destroy()
 
+    def ConfirmarCierre(self, evt):
+        salir = self.DialogoConfirmar(u'Realmente desea salir?')
+        if salir == True:
+            self.Destroy()
+
+    def DialogoConfirmar(self, txt=u'', titulo=u'Confirmación', estilo=0):
+        if estilo == 0:
+            estilo = wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION
+        dial = wx.MessageDialog(self, txt, titulo, estilo)
+        if dial.ShowModal() == wx.ID_YES:
+            return True
+        else:
+            return False
+
     def Conectar(self, servidor, usuario, clave):
         log.debug('Creando Coneccion')
         self.red = statusNet(servidor, usuario, clave)
@@ -282,6 +296,21 @@ class InterfazPrincipal(wx.Frame):
             wx.MessageBox(u'Aplicación Desconectada! Reintente el envío')
             self.vtnRespuesta.Bloquear(False)
 
+    def HiloRepetir(self, msj):
+        respuesta = msj.data
+        if respuesta == "TimeOut":
+            log.debug('El servidor no respondio a tiempo')
+            wx.MessageBox(u'El servidor no respondió, se desconoce si el fue repetido')
+        if respuesta == "Repetido":
+            log.debug('El mensaje se repitio con exito')
+        if respuesta == "NoRepetido":
+            log.debug('El mensaje no se pudo repetir')
+            wx.MessageBox(u'El mensaje no se pudo repetir. Intente nuevamente')
+        if respuesta == "APP_Desconectado":
+            log.debug('La aplicacion se desconecto y no se pudo repetir el mensaje')
+            wx.MessageBox(u'Aplicación Desconectada! Reintente el envío')
+
+
     def APP_Desconectado(self, msj):
         log.debug('Aplicacion Desconectada')
         log.debug('Se reintentara nuevamente en ' + str(self.intervaloTL) + ' segundos')
@@ -332,7 +361,14 @@ class InterfazPrincipal(wx.Frame):
                 self.vtnRespuesta.Show(callback=self.VentanaRespuestaOk, cancelCallback=self.VentanaRespuestaCancel)
             if accion == 'retweet':
                 id = arreglo[5]
-                wx.MessageBox('Repetir: ' + id)
+                log.debug('Solicitando confirmacion para repetir (id=%s)' % id)
+                repetir = self.DialogoConfirmar(u'Desea repetir este mensaje?')
+                if repetir:
+                    log.debug('Se acepta la solicitad para repetir (id=%s)' % id)
+                    hiloRepetir = HiloRepetir(self, self.servidor, self.usuario, self.clave, id)
+                else:
+                    log.debug('Se cancela la solicitud para repetir (id=%s)' % id)
+
             if accion == 'delete':
                 id = arreglo[5]
                 wx.MessageBox('Borrar: ' + id)
@@ -373,6 +409,7 @@ class InterfazPrincipal(wx.Frame):
         Publisher().subscribe(self.APP_Desconectado, "APP_Desconectado")
         Publisher().subscribe(self.LinkPresionado, "LinkPresionado")
         Publisher().subscribe(self.ReiniciaSolicitudTL, "TL_No_Recibido")
+        Publisher().subscribe(self.HiloRepetir, "Hilo_Repetir")
         #
         log.debug('Cantidad de TimeLines: '+str(len(self.tls)))
         for i in range(len(self.tls)):
@@ -442,6 +479,7 @@ class InterfazPrincipal(wx.Frame):
         self.panel.Bind(wx.EVT_BUTTON, self.BotonEstado, self.btnAceptar)
         self.txt_estado.Bind(wx.EVT_TEXT, self.EscribeEstado)
         self.txt_estado.Bind(wx.EVT_KEY_DOWN, self.AtajosTeclado)
+        self.Bind(wx.EVT_CLOSE, self.ConfirmarCierre)
 
         #Barra de Herramientas
         self.h_sizerBarra = wx.BoxSizer(wx.HORIZONTAL)
@@ -794,12 +832,28 @@ class HiloTimeLine(threading.Thread):
                     cont = cont + 1
                     #Si son mensajes, los usuarios se llaman sender y recipient
                     usuario2 = 'recipient'
+
+                    usuario1 = 'user'
                     if self.time_line == 'messages':
                         usuario1 = 'sender'
+
+                    Repetido = False
+                    try:
+                        tlr = tl['retweeted_status']
+                        Repetido = True
+                    except:
+                        pass
+
+
+
+                    if Repetido:
+                        self.DescargarAvatar(tlr[usuario1]['profile_image_url'])
+                        img_tmp = tlr[usuario1]['profile_image_url']
                     else:
-                        usuario1 = 'user'
-                    self.DescargarAvatar(tl[usuario1]['profile_image_url'])
-                    img_tmp = tl[usuario1]['profile_image_url']
+                        self.DescargarAvatar(tl[usuario1]['profile_image_url'])
+                        img_tmp = tl[usuario1]['profile_image_url']
+
+
                     img_arr = img_tmp.split("/")
                     img_nombre = img_arr[len(img_arr) - 1]
                     if (os.path.isfile(self.dir_imagenes + img_nombre)):
@@ -814,12 +868,19 @@ class HiloTimeLine(threading.Thread):
                     if self.time_line == 'messages':
                         tmp += '<font size="2"><b>' + tl[usuario1 +'_screen_name'] + '</b><br>'
                     else:
-                        tmp += '<font size="2"><b>' + tl[usuario1]['screen_name'] + '</b><br>'
+                        if Repetido:
+                            tmp += '<font size="2"><b>' + tlr[usuario1]['screen_name'] + '</b><br>'
+                        else:
+                            tmp += '<font size="2"><b>' + tl[usuario1]['screen_name'] + '</b><br>'
                     #
+
                     if self.time_line == 'messages':
                         msj = tl['text']
                     else:
-                        msj = tl['statusnet_html']
+                        if Repetido:
+                            msj = tlr['statusnet_html']
+                        else:
+                            msj = tl['statusnet_html']
 
                     tmp = u"%s %s</font>" % (tmp, msj) #text o statusnet_html
                     tmp += '</td>'
@@ -829,38 +890,46 @@ class HiloTimeLine(threading.Thread):
                     tmp += '<td align="right" valign="top">'
                     tmp += '<font size="1" color="gray">'
 
-
-                    #tmp += '</font>'
-                    #tmp +='</td>'
-                    #tmp += '</tr>'
-                    #
-                    #tmp += '<tr>'
-                    #tmp +='<td valign="top" align="right">'
-                    #tmp += '<font size="1" color="gray">'
-                    #tmp += '<br>'
-                    #
                     if self.time_line!= 'messages':
-
-                        tmp += '<a href="%s/notice/new/%s/%s"><img src="img/link_responder.png"></a>' % (self.servidor, tl[usuario1]['screen_name'], tl['id'])
+                        if Repetido:
+                            tmp += '<a href="%s/notice/new/%s/%s"><img src="img/link_responder.png"></a>' % (self.servidor, tlr[usuario1]['screen_name'], tlr['id'])
+                        else:
+                            tmp += '<a href="%s/notice/new/%s/%s"><img src="img/link_responder.png"></a>' % (self.servidor, tl[usuario1]['screen_name'], tl['id'])
 
                         # si es mi tweet, puedo borrar, si no, puedo repetir
-                        if self.red.miPerfilAttr('id')!=tl[usuario1]['id']:
-                            tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/notice/retweet/%s"><img src="img/link_repetir.png"></a>' % (self.servidor, tl['id'])
-
+                        if Repetido:
+                            if self.red.miPerfilAttr('id')!=tl[usuario1]['id']:
+                                tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/notice/retweet/%s"><img src="img/link_repetir.png"></a>' % (self.servidor, tlr['id'])
+                            else:
+                                #como es mio, pero lo puedo borrar
+                                tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/notice/delete/%s"><img src="img/link_borrar.gif"></a>' % (self.servidor, tl['id'])
+                                pass
                         else:
-                            tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/notice/delete/%s"><img src="img/link_borrar.gif"></a>' % (self.servidor, tl['id'])
+                            if self.red.miPerfilAttr('id')!=tl[usuario1]['id']:
+                                tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/notice/retweet/%s"><img src="img/link_repetir.png"></a>' % (self.servidor, tl['id'])
+                            else:
+                                tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/notice/delete/%s"><img src="img/link_borrar.gif"></a>' % (self.servidor, tl['id'])
+                        #
+                        if Repetido:
+                            tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/favorites/create/%s"><img src="img/link_favorito.png"></a>' % (self.servidor, tlr['id'])
+                        else:
+                            tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/favorites/create/%s"><img src="img/link_favorito.png"></a>' % (self.servidor, tl['id'])
 
-
-                        tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/favorites/create/%s"><img src="img/link_favorito.png"></a>' % (self.servidor, tl['id'])
-
-
-                        tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/conversation/%s"><img src="img/link_contexto.png"></a>' % (self.servidor, tl['statusnet_conversation_id'])
+                        if Repetido:
+                            tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/conversation/%s"><img src="img/link_contexto.png"></a>' % (self.servidor, tlr['statusnet_conversation_id'])
+                        else:
+                            tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/conversation/%s"><img src="img/link_contexto.png"></a>' % (self.servidor, tl['statusnet_conversation_id'])
                     #
                     tmp += '<br>'
                     if self.time_line != 'messages':
                         tmp += u'Vía %s' % tl['source']
-                        if tl['in_reply_to_user_id'] != None:
-                            tmp += ', en respuesta a <i>' + tl['in_reply_to_screen_name'] +  '</i>'
+                        if Repetido:
+                            tmp += ', Repetido por ' + tl[usuario1]['screen_name']
+                            if tlr['in_reply_to_user_id'] != None:
+                                tmp += ', en respuesta a <i>' + tlr['in_reply_to_screen_name'] +  '</i>'
+                        else:
+                            if tl['in_reply_to_user_id'] != None:
+                                tmp += ', en respuesta a <i>' + tl['in_reply_to_screen_name'] +  '</i>'
                     #
                     tmp += '</font>'
                     tmp += '</td>'
@@ -1006,6 +1075,37 @@ class HiloEnviarMensaje(threading.Thread):
 
         else:
             wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje", "APP_Desconectado")
+
+class HiloRepetir(threading.Thread):
+    servidor = ''
+    usuario = ''
+    clave = ''
+    parent = None
+    idmensaje = 0
+    def __init__(self, parent, servidor, usuario, clave, idmensaje):
+        threading.Thread.__init__(self)
+        self.parent = parent
+        self.servidor=servidor
+        self.clave=clave
+        self.usuario=usuario
+
+        self.idmensaje = idmensaje
+        self.daemon = True
+        self.start()
+
+    def run(self):
+        self.red = statusNet(self.servidor, self.usuario, self.clave)
+        if self.red.EstaConectado():
+                res = self.red.Repetir(self.idmensaje)
+                if res == "{TimeOut}":
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Repetir", "TimeOut")
+                if res != "{Error}":
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Repetir", "Repetido")
+                else:
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Repetir", "NoRepetido")
+        else:
+            wx.CallAfter(Publisher().sendMessage, "Hilo_Repetir", "APP_Desconectado")
+
 
 class VentanaResponder(wx.Frame):
 

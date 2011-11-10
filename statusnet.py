@@ -51,7 +51,7 @@ class statusNet():
             else:
                 self.respuesta_login = '{Error}'
         except urllib2.URLError, e:
-            log.debug('Sin respuesta del servidor. Razon: '+ str(e.reason))
+            log.debug('Sin respuesta del servidor. Razon: '+ str(e))
             self.respuesta_login = '{TimeOut}'
         except socket.timeout, e2:
             log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
@@ -84,7 +84,7 @@ class statusNet():
             leido = open.read()
             miTL = json.loads(leido)
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e))
             miTL = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
@@ -107,7 +107,7 @@ class statusNet():
             leido = open.read()
             miTL = json.loads(leido)
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e))
             miTL = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
@@ -136,7 +136,7 @@ class statusNet():
             leido = open.read()
             miTL = json.loads(leido)
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e))
             miTL = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
@@ -160,7 +160,7 @@ class statusNet():
             leido = open.read()
             miTL = json.loads(leido)
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e))
             miTL = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
@@ -185,7 +185,7 @@ class statusNet():
             leido = open.read()
             miTL = json.loads(leido)
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e))
             miTL = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
@@ -205,7 +205,7 @@ class statusNet():
             leido = open.read()
             log.debug('Enviado: ' + str(leido))
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e))
             leido = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
@@ -225,7 +225,28 @@ class statusNet():
             leido = open.read()
             log.debug('Enviado: ' + str(leido))
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + str(e.reason))
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e))
+            leido = '{TimeOut}'
+        except urllib2.HTTPError, e1:
+            log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
+            leido = '{TimeOut}'
+        except socket.timeout, e2:
+            log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
+            leido = '{TimeOut}'
+        except:
+            log.debug('Error desconocido')
+            leido = '{Error}'
+        return leido
+
+
+    def Repetir(self, idmensaje):
+        try:
+            paquete = urlencode({'source': self.app_origen})
+            open = urllib2.urlopen(self.apibase + '/statuses/retweet/' + str(idmensaje) + '.json?%s' % paquete, '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
+            leido = open.read()
+            log.debug('Mensaje repetido: ' + str(leido))
+        except urllib2.URLError, e:
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e))
             leido = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
