@@ -6,7 +6,7 @@ import wx.animate
 import threading
 from wx.lib.pubsub import Publisher
 import httplib
-#import sys
+import sys
 import os
 import datetime
 import time
@@ -17,7 +17,10 @@ from statusnet import *
 
 logging.basicConfig()
 log = logging.getLogger('GUI')
-log.setLevel(logging.DEBUG)
+
+if len(sys.argv) > 1:
+    if sys.argv.index('--debug'):
+        log.setLevel(logging.DEBUG)
 
 
 class InterfazPrincipal(wx.Frame):

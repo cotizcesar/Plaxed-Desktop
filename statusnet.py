@@ -5,10 +5,13 @@ from urllib import urlencode
 from base.base import *
 import logging
 import socket
+import sys
 
 logging.basicConfig()
 log = logging.getLogger('StatusNET')
-log.setLevel(logging.DEBUG)
+if len(sys.argv) > 1:
+    if sys.argv.index('--debug'):
+        log.setLevel(logging.DEBUG)
 
 
 class statusNet():
