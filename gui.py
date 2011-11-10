@@ -40,9 +40,7 @@ class InterfazPrincipal(wx.Frame):
     dir_imagenes = ''
     app_dir_img = './img/'
     html_loader_tl = '<br><br><center><img src="img/loader_timeline_transparente2.gif"></center>'
-    usuario = ''
-    clave = ''
-    servidor = ''
+    dicConeccion = {}
     intervaloTL = 15
     txtDescripcion = ''
     me = None  # Variable con datos del usuario, no implementada aun
@@ -57,14 +55,12 @@ class InterfazPrincipal(wx.Frame):
     Let_Tahoma_14 = None
     Let_Tahoma_15 = None
     Let_Tahoma_16 = None
-
-    def __init__(self, parent, titulo, servidor, usuario, clave):
-        self.parent = parent
-        self.usuario = usuario
-        self.clave = clave
-        self.servidor = servidor
+    btn_tam = None
+    def __init__(self, parent, titulo, dicCon):
         wx.Frame.__init__(self, parent, wx.ID_ANY, titulo, size=(700, 600))
-        self.Conectar(self.servidor, self.usuario, self.clave)
+        self.parent = parent
+        self.dicConeccion = dicCon
+        self.Conectar(self.dicConeccion)
 
     def __del__(self):
         try:
@@ -88,9 +84,9 @@ class InterfazPrincipal(wx.Frame):
         else:
             return False
 
-    def Conectar(self, servidor, usuario, clave):
+    def Conectar(self, dicCon):
         log.debug('Creando Coneccion')
-        self.red = statusNet(servidor, usuario, clave)
+        self.red = statusNet(self.dicConeccion)
         if self.red.EstaConectado():
             log.debug('Se establecio la Coneccion')
             self.ConfigurarFuentes()
@@ -143,7 +139,7 @@ class InterfazPrincipal(wx.Frame):
             self.txt_estado.Disable()
             self.btnAceptar.Disable()
             self.PlayLoaderEnvio()
-            self.respuestaEnvio = HiloEnviarMensaje(self, self.servidor, self.usuario, self.clave, texto)
+            self.respuestaEnvio = HiloEnviarMensaje(self, self.dicConeccion, texto)
         else:
             wx.MessageBox('Debe ingresar un mensaje')
             self.txt_estado.SetValue('')
@@ -152,8 +148,6 @@ class InterfazPrincipal(wx.Frame):
 
     def InnerHTML(self, txt):
         log.debug("Inyectando HTML")
-        #bottom=self.cols[0].GetBottom()
-
         self.cols[0].SetPage(txt)
         if self.scrollBottom[self.indiceActual] != -1:
             self.cols[0].SetBottom(self.scrollBottom[self.indiceActual])
@@ -172,6 +166,8 @@ class InterfazPrincipal(wx.Frame):
             Lugar = 'Favoritos'
         if origen == 'messages':
             Lugar = 'Mensajes'
+        if origen == 'conversation':
+            Lugar = 'Conversación'
         self.sBar.SetFields((Lugar,'Autor: @jrcsdev'))
 
     def DescargarAvatar(self, ruta_img):
@@ -220,7 +216,7 @@ class InterfazPrincipal(wx.Frame):
 
     def Actualizar(self):
         self.ActualizaBarraEstado()
-        self.respuestaTL = HiloTimeLine(self, self.servidor, self.usuario, self.clave,self.cols[0].GetOrigen(), self.primeraCargaImg)
+        self.respuestaTL = HiloTimeLine(self, self.dicConeccion, self.cols[0].GetOrigen(), self.primeraCargaImg)
         log.debug("Solicitando Actualizacion de: " + self.cols[0].GetOrigen())
 
     def ActualizarTimer(self):
@@ -235,25 +231,6 @@ class InterfazPrincipal(wx.Frame):
             log.debug("Reiniciando timer a %s segundos", str(self.intervaloTL))
             self.timer = threading.Timer(self.intervaloTL, self.Actualizar)
         self.timer.start()
-
-    def TL_Mensajes(self, msj):
-        log.debug('****SE RECIBIERON MENSAJES DEL THREAD****')
-        if self.primeraCargaImg:
-            self.primeraCargaImg = False
-        self.ultimo[self.indiceActual] = self.respuestaTL.ultimo
-        if self.cols_vacia[self.indiceActual] == True:
-            self.txt[self.indiceActual] = self.respuestaTL.txt
-        else:
-            self.txt[self.indiceActual] = self.respuestaTL.txt + self.txt[self.indiceActual]
-            self.scrollBottom[self.indiceActual] = self.cols[0].GetBottom()
-        self.cols_vacia[self.indiceActual] = False
-
-        self.InnerHTML(self.txt[self.indiceActual])
-
-        self.ActualizarTimer()
-
-    def TL_Vacio(self, msj):
-        self.ActualizarTimer()
 
     def HiloEnviarMensaje(self, msj):
         respuesta = msj.data
@@ -318,16 +295,37 @@ class InterfazPrincipal(wx.Frame):
         log.debug('Aplicacion Desconectada')
         log.debug('Se reintentara nuevamente en ' + str(self.intervaloTL) + ' segundos')
         self.ActualizarTimer()
+    
+    def HiloTimeLine(self, msj):
+        respuesta = msj.data
+        if respuesta == 'TL_Recargado':
+            log.debug('****SE RECIBIERON MENSAJES DEL THREAD****')
+            if self.primeraCargaImg:
+                self.primeraCargaImg = False
+            self.ultimo[self.indiceActual] = self.respuestaTL.ultimo
+            if self.cols_vacia[self.indiceActual] == True:
+                self.txt[self.indiceActual] = self.respuestaTL.txt
+            else:
+                self.txt[self.indiceActual] = self.respuestaTL.txt + self.txt[self.indiceActual]
+                self.scrollBottom[self.indiceActual] = self.cols[0].GetBottom()
+            self.cols_vacia[self.indiceActual] = False
 
-    def ReiniciaSolicitudTL(self, msj):
-        log.debug('Interrumpiendo TL para reiniciar solicitud **')
-        self.Actualizar()
+            self.InnerHTML(self.txt[self.indiceActual])
+
+            self.ActualizarTimer()
+
+        if respuesta == 'TL_Intacto':
+            self.ActualizarTimer()
+        
+        if respuesta == 'APP_Desconectado':
+            log.debug('Interrumpiendo TL para reiniciar solicitud **')
+            self.Actualizar()
 
     def LinkPresionado(self, msj):
         link = self.cols[0].enlace
         arreglo = link.split('/')
         url_servidor=arreglo[2]
-        arreglo1 = self.servidor.split('/')
+        arreglo1 = self.dicConeccion['servidor'].split('/')
         app_servidor = arreglo1[2]
         #
         if url_servidor != app_servidor:
@@ -350,7 +348,6 @@ class InterfazPrincipal(wx.Frame):
 
         if url_tipo == 'url':
             wx.LaunchDefaultBrowser(link)
-            #wx.MessageBox(u'Las URLs no están implementadas todavía')
             return False
 
         if url_tipo == 'notice':
@@ -359,7 +356,6 @@ class InterfazPrincipal(wx.Frame):
                 usuario = arreglo[5]
                 id = arreglo[6]
                 parametro = usuario + ',' + id
-                #wx.MessageBox('Respuesta a usuario %s, Id del status %s' % (usuario, id))
                 self.vtnRespuesta = VentanaResponder(self, parametro)
                 self.vtnRespuesta.Show(callback=self.VentanaRespuestaOk, cancelCallback=self.VentanaRespuestaCancel)
             if accion == 'retweet':
@@ -368,7 +364,7 @@ class InterfazPrincipal(wx.Frame):
                 repetir = self.DialogoConfirmar(u'Desea repetir este mensaje?')
                 if repetir:
                     log.debug('Se acepta la solicitad para repetir (id=%s)' % id)
-                    hiloRepetir = HiloRepetir(self, self.servidor, self.usuario, self.clave, id)
+                    hiloRepetir = HiloRepetir(self, self.dicConeccion, id)
                 else:
                     log.debug('Se cancela la solicitud para repetir (id=%s)' % id)
 
@@ -386,14 +382,11 @@ class InterfazPrincipal(wx.Frame):
             #
         if url_tipo == 'conversation':
             id = arreglo[4]
-            wx.MessageBox('Ver Conversacion: ' + id)
+            #hiloConversacion = HiloConversacion(self, self.dicConeccion, id)
             return False
 
     def VentanaRespuestaOk(self, txt, idmensaje):
-        #wx.MessageBox('Se enviara el mensaje "%s" en respuesta al id = %s' % (txt, idmensaje))
-        #{Error}
-        self.respuestaEnvioDirecto = HiloEnviarMensaje(self, self.servidor, self.usuario, self.clave, txt, True, idmensaje)
-
+        self.respuestaEnvioDirecto = HiloEnviarMensaje(self, self.dicConeccion, txt, True, idmensaje)
 
     def VentanaRespuestaCancel(self):
         pass
@@ -405,13 +398,11 @@ class InterfazPrincipal(wx.Frame):
         self.loaderEnvio.Stop()
 
     def ConfigurarVentana(self):
-        Publisher().subscribe(self.TL_Mensajes, "TL_Mensajes")
-        Publisher().subscribe(self.TL_Vacio, "TL_Vacio")
+        Publisher().subscribe(self.HiloTimeLine, "Hilo_Time_Line")
         Publisher().subscribe(self.HiloEnviarMensaje, "Hilo_Enviar_Mensaje")
         Publisher().subscribe(self.HiloEnviarMensajeDirecto, "Hilo_Enviar_Mensaje_Directo")
         Publisher().subscribe(self.APP_Desconectado, "APP_Desconectado")
         Publisher().subscribe(self.LinkPresionado, "LinkPresionado")
-        Publisher().subscribe(self.ReiniciaSolicitudTL, "TL_No_Recibido")
         Publisher().subscribe(self.HiloRepetir, "Hilo_Repetir")
         #
         log.debug('Cantidad de TimeLines: '+str(len(self.tls)))
@@ -486,22 +477,27 @@ class InterfazPrincipal(wx.Frame):
 
         #Barra de Herramientas
         self.h_sizerBarra = wx.BoxSizer(wx.HORIZONTAL)
-        btn_tam = wx.Size(40,40)
-        self.btnInicio = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/inicio24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, btn_tam, wx.BU_AUTODRAW)
+        self.btn_tam = wx.Size(40,40)
+        self.btnInicio = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/inicio24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, self.btn_tam, wx.BU_AUTODRAW)
         self.btnInicio.SetToolTipString( u"Inicio" )
-        self.btnPublico = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/publico24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, btn_tam, wx.BU_AUTODRAW)
+        self.btnPublico = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/publico24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, self.btn_tam, wx.BU_AUTODRAW)
         self.btnPublico.SetToolTipString( u"Público" )
-        self.btnRespuestas = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/respuestas24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, btn_tam, wx.BU_AUTODRAW)
+        self.btnRespuestas = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/respuestas24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, self.btn_tam, wx.BU_AUTODRAW)
         self.btnRespuestas.SetToolTipString( u"Respuestas" )
-        self.btnMensajes = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/dm24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, btn_tam, wx.BU_AUTODRAW)
+        self.btnMensajes = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/dm24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, self.btn_tam, wx.BU_AUTODRAW)
         self.btnMensajes.SetToolTipString( u"Mensajes" )
-        self.btnFavoritos = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/favoritos24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, btn_tam, wx.BU_AUTODRAW)
+        self.btnFavoritos = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/favoritos24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, self.btn_tam, wx.BU_AUTODRAW)
         self.btnFavoritos.SetToolTipString( u"Favoritos" )
+        self.btnConversacion = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/conversacion24x24.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, self.btn_tam, wx.BU_AUTODRAW)
+        self.btnConversacion.SetToolTipString(u"Click para cerrar Conversación")
+        self.btnConversacion.Disable()
+        #
         self.h_sizerBarra.Add(self.btnInicio, 0, wx.BOTTOM|wx.LEFT, 5)
         self.h_sizerBarra.Add(self.btnPublico, 0, wx.BOTTOM, 5)
         self.h_sizerBarra.Add(self.btnRespuestas, 0, wx.BOTTOM, 5)
         self.h_sizerBarra.Add(self.btnFavoritos, 0, wx.BOTTOM, 5)
         self.h_sizerBarra.Add(self.btnMensajes, 0, wx.BOTTOM, 5)
+        self.h_sizerBarra.Add(self.btnConversacion, 0, wx.BOTTOM, 5)
         #
         self.Bind(wx.EVT_BUTTON, self.CambioLinea, self.btnPublico)
         self.Bind(wx.EVT_BUTTON, self.CambioLinea, self.btnInicio)
@@ -546,6 +542,9 @@ class InterfazPrincipal(wx.Frame):
         if obj == self.btnFavoritos:
             indiceNuevo = self.tls.index('favorites')
 
+        if obj == self.btnMensajes:
+            indiceNuevo = self.tls.index('messages')
+        
         if obj == self.btnMensajes:
             indiceNuevo = self.tls.index('messages')
 
@@ -607,10 +606,6 @@ class MiHtmlWindow(wx.html.HtmlWindow):
         self.SetFonts("Tahoma", "Courier New", _FONT_SIZES)
 
     def OnLinkClicked(self, link):
-        #
-        #wx.MessageBox(str(self.GetScrollPixelsPerUnit()[0]))
-        #return False
-        #
         evento = link.GetEvent()
         if evento.Button != 1:
             return False
@@ -646,9 +641,8 @@ class cColumna(MiHtmlWindow):
 
 class PlaxedLogin(wx.Frame):
     Validado = False
-    usr = ''
-    pas = ''
-    serv = ''
+    dicConeccion = {}
+    servidor = 'http://beta.plaxed.com'
     def __init__(self, parent):
         self.parent = parent
         wx.Frame.__init__(self, None, wx.ID_ANY, 'Plaxed Desktop (Pre-Alpha)', size=(320, 450))
@@ -728,13 +722,11 @@ class PlaxedLogin(wx.Frame):
             self.txt_clave.Enable()
             return False
         self.boton.Disable()
-        servidor = 'http://beta.plaxed.com'
-        self.usuario = usuario
-        self.clave = clave
-        self.servidor = servidor
+        #
+        self.dicConeccion = {'servidor': self.servidor, 'usuario': usuario, 'clave': clave}
         self.PlayLoader()
         self.sBar.SetStatusText('Validando credenciales...')
-        self.t = HiloValidar(self, self.servidor, self.usuario, self.clave)
+        self.t = HiloValidar(self, self.dicConeccion)
 
 
     def HiloLogin(self, msj):
@@ -750,7 +742,7 @@ class PlaxedLogin(wx.Frame):
         if respuesta == 'LoginAceptado':
             log.debug('Accesando a Interfaz Principal')
             self.sBar.SetStatusText(u'Cargando Aplicación...')
-            frmMain = InterfazPrincipal(self, APLICACION_VENTANA_TITULO, self.servidor, self.usuario, self.clave)
+            frmMain = InterfazPrincipal(self, APLICACION_VENTANA_TITULO, self.dicConeccion)
         if respuesta == 'LoginRechazado':
             log.debug('Error de Autenticacion')
             self.StopLoader()
@@ -790,12 +782,11 @@ class HiloTimeLine(threading.Thread):
     dir_usuario = ''
     dir_imagenes = ''
     app_dir_img = './img/'
-    def __init__(self, parent, servidor, usuario, clave, time_line, primera_carga):
+    def __init__(self, parent, dicCon, time_line, primera_carga):
         threading.Thread.__init__(self)
         self.parent = parent
-        self.servidor = servidor
-        self.clave = clave
-        self.usuario = usuario
+        self.dicConeccion = dicCon
+        self.servidor = self.dicConeccion['servidor']
         self.time_line = time_line
         self.primera_carga = primera_carga
         self.ultimo=self.parent.ultimo[self.parent.indiceActual]
@@ -803,7 +794,7 @@ class HiloTimeLine(threading.Thread):
         self.start()
 
     def run(self):
-        self.red = statusNet(self.servidor, self.usuario, self.clave)
+        self.red = statusNet(self.dicConeccion)
         if self.red.EstaConectado():
             self.dir_usuario = self.dir_perfiles + str(self.red.miPerfilAttr('id'))
             self.dir_imagenes = self.dir_usuario + '/imagenes/'
@@ -938,8 +929,6 @@ class HiloTimeLine(threading.Thread):
                     tmp += '</td>'
                     tmp += '</tr>'
                     tmp += '</table>'
-
-
                     #
                     if ultimo == 0:
                         ultimo = tl['id']
@@ -948,12 +937,12 @@ class HiloTimeLine(threading.Thread):
                 log.debug("Finalizando descarga de mensajes")
                 self.txt = tmp
 
-                wx.CallAfter(Publisher().sendMessage, "TL_Mensajes", "Final de Thread")
+                wx.CallAfter(Publisher().sendMessage, "Hilo_Time_Line", "TL_Recargado")
             else:
-                wx.CallAfter(Publisher().sendMessage, "TL_Vacio", "Final de Thread")
+                wx.CallAfter(Publisher().sendMessage, "Hilo_Time_Line", "TL_Intacto")
                 log.debug("No existen mensajes nuevos")
         else:
-            wx.CallAfter(Publisher().sendMessage, "APP_Desconectado", "Final de Thread")
+            wx.CallAfter(Publisher().sendMessage, "Hilo_Time_Line", "APP_Desconectado")
 
 
     def RutaOnlineToLocal(self, ruta):
@@ -1008,21 +997,17 @@ class HiloTimeLine(threading.Thread):
                 log.debug('Se borro la imagen anterior')
 
 class HiloValidar(threading.Thread):
-    servidor = ''
-    usuario = ''
-    clave = ''
+    dicConeccion = {}
     parent = None
-    def __init__(self, parent, servidor, usuario, clave):
+    def __init__(self, parent, dicCon):
         threading.Thread.__init__(self)
         self.parent = parent
-        self.servidor=servidor
-        self.clave=clave
-        self.usuario=usuario
+        self.dicConeccion = dicCon
         self.daemon = True
         self.start()
 
     def run(self):
-        self.red = statusNet(self.servidor, self.usuario, self.clave)
+        self.red = statusNet(self.dicConeccion)
         if self.red.respuesta_login == '{TimeOut}':
             wx.CallAfter(Publisher().sendMessage, "Hilo_Login", "LoginTimeOut")
             return False
@@ -1037,19 +1022,15 @@ class HiloValidar(threading.Thread):
             return True
 
 class HiloEnviarMensaje(threading.Thread):
-    servidor = ''
-    usuario = ''
-    clave = ''
+    dicConeccion = {}
     parent = None
     txt = ''
     directo = False
     idmensaje = True
-    def __init__(self, parent, servidor, usuario, clave, txt, directo=False, idmensaje=''):
+    def __init__(self, parent, dicCon, txt, directo=False, idmensaje=''):
         threading.Thread.__init__(self)
         self.parent = parent
-        self.servidor=servidor
-        self.clave=clave
-        self.usuario=usuario
+        self.dicConeccion = dicCon
         self.txt = txt
         self.directo = directo
         self.idmensaje = idmensaje
@@ -1057,7 +1038,7 @@ class HiloEnviarMensaje(threading.Thread):
         self.start()
 
     def run(self):
-        self.red = statusNet(self.servidor, self.usuario, self.clave)
+        self.red = statusNet(self.dicConeccion)
         if self.red.EstaConectado():
             if self.directo:
                 res = self.red.PublicarRespuesta(self.txt, self.idmensaje)
@@ -1080,24 +1061,19 @@ class HiloEnviarMensaje(threading.Thread):
             wx.CallAfter(Publisher().sendMessage, "Hilo_Enviar_Mensaje", "APP_Desconectado")
 
 class HiloRepetir(threading.Thread):
-    servidor = ''
-    usuario = ''
-    clave = ''
+    dicConeccion = {}
     parent = None
     idmensaje = 0
-    def __init__(self, parent, servidor, usuario, clave, idmensaje):
+    def __init__(self, parent, dicCon, idmensaje):
         threading.Thread.__init__(self)
         self.parent = parent
-        self.servidor=servidor
-        self.clave=clave
-        self.usuario=usuario
-
+        self.dicConeccion = dicCon
         self.idmensaje = idmensaje
         self.daemon = True
         self.start()
 
     def run(self):
-        self.red = statusNet(self.servidor, self.usuario, self.clave)
+        self.red = statusNet(self.dicConeccion)
         if self.red.EstaConectado():
                 res = self.red.Repetir(self.idmensaje)
                 if res == "{TimeOut}":

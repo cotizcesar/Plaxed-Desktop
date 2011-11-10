@@ -16,36 +16,39 @@ if len(sys.argv) > 1:
 
 class statusNet():
 
-    var_conectado = False
+    dicConeccion = {}
     usuario = ''
+    servidor = ''
     clave = ''
     apibase = ''
-    servidor = ''
     mi_perfil = {}
     app_origen = APLICACION_SOURCE
     respuesta_login = ''
+    var_conectado = False
+    def __init__(self, dicCon):
+        self.dicConeccion = dicCon
+        self.Configurar()
+        self.Conectar()
+    
+    def Configurar(self):
+        self.apibase = self.dicConeccion['servidor'] + "/api"
+        self.apibase.replace("//", "/")
+        self.servidor = self.dicConeccion['servidor']
+        self.usuario = self.dicConeccion['usuario']
+        self.clave = self.dicConeccion['clave']
 
-    def __init__(self, servidor, usuario, clave):
-        self.Conectar(servidor, usuario, clave)
-
-    def Conectar(self, servidor, usuario, clave):
-        apibase = servidor + "/api"
-        apibase.replace("//", "/")
+    def Conectar(self):
         pwd_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-        pwd_mgr.add_password(None, apibase, usuario, clave)
+        pwd_mgr.add_password(None, self.apibase, self.usuario, self.clave)
         self.handler = urllib2.HTTPBasicAuthHandler(pwd_mgr)
         self.opener = urllib2.build_opener(self.handler)
         urllib2.install_opener(self.opener)
-        self.conectado = False
+        
         try:
-            open = urllib2.urlopen(apibase + '/account/verify_credentials.json', '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
+            open = urllib2.urlopen(self.apibase + '/account/verify_credentials.json', '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
             leido = open.read()
             self.mi_perfil = json.loads(leido)
             self.var_conectado = True
-            self.usuario = usuario
-            self.clave = clave
-            self.servidor = servidor
-            self.apibase = apibase
             self.respuesta_login = '{CredencialValida}'
         except urllib2.HTTPError, e1:
             log.debug('Error HTTP: '+ str(e1.code) + str(e1.read()))
@@ -66,9 +69,6 @@ class statusNet():
 
     def EstaConectado(self):
         return self.var_conectado
-
-    def mostrarMensaje(self, texto):
-        pass
 
     def miPerfilAttr(self, param):
         try:

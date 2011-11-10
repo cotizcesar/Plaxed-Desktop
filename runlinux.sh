@@ -1,2 +1,2 @@
 #! /bin/bash
-python __init__.py
+python __init__.py --debug
