@@ -2,7 +2,7 @@
 
 #Variables GLOBALES
 APLICACION_VENTANA_TITULO = 'Plaxed Desktop (Pre-Alpha)'
-APLICACION_SOURCE = "Plaxed Desktop (Pre-Alpha)"
+APLICACION_SOURCE = "Plaxed Desktop"
 APLICACION_TIEMPO_ESPERA_TIMEOUT = 15
 
 

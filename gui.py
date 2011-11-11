@@ -8,7 +8,7 @@ from wx.lib.pubsub import Publisher
 import httplib
 import sys
 import os
-import datetime
+from datetime import datetime
 import time
 #import getpass
 import logging
@@ -123,6 +123,10 @@ class InterfazPrincipal(wx.Frame):
         if keycode == wx.WXK_F5:
             log.debug('F5: Enviar Mensaje')
             self.EnviarMensaje()
+        elif keycode == wx.WXK_ESCAPE:
+            self.Close()
+        elif keycode == wx.WXK_F9:
+            wx.LaunchDefaultBrowser(self.dicConeccion['servidor'])
         else:
             event.Skip()
 
@@ -295,7 +299,7 @@ class InterfazPrincipal(wx.Frame):
         log.debug('Aplicacion Desconectada')
         log.debug('Se reintentara nuevamente en ' + str(self.intervaloTL) + ' segundos')
         self.ActualizarTimer()
-    
+
     def HiloTimeLine(self, msj):
         respuesta = msj.data
         if respuesta == 'TL_Recargado':
@@ -316,7 +320,7 @@ class InterfazPrincipal(wx.Frame):
 
         if respuesta == 'TL_Intacto':
             self.ActualizarTimer()
-        
+
         if respuesta == 'APP_Desconectado':
             log.debug('Interrumpiendo TL para reiniciar solicitud **')
             self.Actualizar()
@@ -452,7 +456,6 @@ class InterfazPrincipal(wx.Frame):
         self.h_sizerPerfil.Add(self.loaderEnvio, 0, wx.RIGHT|wx.TOP|wx.ALIGN_TOP, 5)
         self.loaderEnvio.GetPlayer().UseBackgroundColour(True)
 
-
         #configurando la fila de estado
         self.h_sizer1 = wx.BoxSizer(wx.HORIZONTAL)
         self.txt_estado = wx.TextCtrl(self.panel, wx.ID_ANY, '', (-1, -1), (-1, 50), style=wx.TE_MULTILINE|wx.TE_NO_VSCROLL|wx.TE_PROCESS_ENTER)
@@ -472,7 +475,8 @@ class InterfazPrincipal(wx.Frame):
         #Configurando eventos
         self.panel.Bind(wx.EVT_BUTTON, self.BotonEstado, self.btnAceptar)
         self.txt_estado.Bind(wx.EVT_TEXT, self.EscribeEstado)
-        self.txt_estado.Bind(wx.EVT_KEY_DOWN, self.AtajosTeclado)
+        #self.txt_estado.Bind(wx.EVT_KEY_DOWN, self.AtajosTeclado)
+        self.Bind(wx.EVT_CHAR_HOOK, self.AtajosTeclado)
         self.Bind(wx.EVT_CLOSE, self.ConfirmarCierre)
 
         #Barra de Herramientas
@@ -544,7 +548,7 @@ class InterfazPrincipal(wx.Frame):
 
         if obj == self.btnMensajes:
             indiceNuevo = self.tls.index('messages')
-        
+
         if obj == self.btnMensajes:
             indiceNuevo = self.tls.index('messages')
 
@@ -917,6 +921,8 @@ class HiloTimeLine(threading.Thread):
                     tmp += '<br>'
                     if self.time_line != 'messages':
                         tmp += u'Vía %s' % tl['source']
+                        fecha = self.ProcesarFecha(tl['created_at'])
+                        tmp += ', ' + str(fecha) + '<br>'
                         if Repetido:
                             tmp += ', Repetido por ' + tl[usuario1]['screen_name']
                             if tlr['in_reply_to_user_id'] != None:
@@ -943,6 +949,15 @@ class HiloTimeLine(threading.Thread):
                 log.debug("No existen mensajes nuevos")
         else:
             wx.CallAfter(Publisher().sendMessage, "Hilo_Time_Line", "APP_Desconectado")
+
+    def ProcesarFecha(self, fecha):
+        tfecha = fecha[0:19] + fecha[25:]
+        formato = '%a %b %d %H:%M:%S %Y'
+        fechaMensaje = datetime.strptime(tfecha, formato)
+        fechaNueva = 'el ' + str(fechaMensaje.day) + '/' + str(fechaMensaje.month)
+        fechaNueva += '/' + str(fechaMensaje.year) + ' a las ' + [str(fechaMensaje.hour), str(int(fechaMensaje.hour)-12)][fechaMensaje.hour>12]
+        fechaNueva += ':' + str(fechaMensaje.minute) + ['a.m','p.m'][fechaMensaje.hour>=12]
+        return fechaNueva
 
 
     def RutaOnlineToLocal(self, ruta):
@@ -1090,9 +1105,30 @@ class VentanaResponder(wx.Frame):
 
     idmensaje = 0
     carRestantes = 140
+    bloqueado = False
     def __init__(self, parent, destinatario):
         wx.Frame.__init__(self, parent=parent, id=-1, title='Responder', size=(340,150), style=wx.FRAME_FLOAT_ON_PARENT | wx.CAPTION | wx.FRAME_TOOL_WINDOW | wx.SYSTEM_MENU| wx.CLOSE_BOX)
         self.parent = parent
+        self.destinatario = destinatario
+        self.ConfigurarVentana()
+
+    def LeerTecla(self, evt):
+        tecla = evt.GetKeyCode()
+        if tecla == wx.WXK_ESCAPE and self.bloqueado == False:
+            self.Close()
+        evt.Skip()
+
+    def Escribiendo(self, evt):
+        texto = self.txtRespuesta.GetValue()
+        restante = 140 - len(texto)
+        self.carRestantes = restante
+        self.lblCuenta.SetLabel(str(restante))
+        evt.Skip()
+
+    def ConfigurarVentana(self):
+        datos = self.destinatario.split(',')
+        self.idmensaje = datos[1]
+        self.SetTitle('Responder a @' + datos[0])
         self.panel = wx.Panel(self, -1)
         self.bs_vertical = wx.BoxSizer(wx.VERTICAL)
         self.txtRespuesta = wx.TextCtrl(self.panel, wx.ID_ANY, '', (-1, -1), (-1, 50), style=wx.TE_MULTILINE|wx.TE_NO_VSCROLL|wx.TE_PROCESS_ENTER)
@@ -1117,22 +1153,9 @@ class VentanaResponder(wx.Frame):
         #
         self.btnAceptar.Bind(wx.EVT_BUTTON, self.OnOK)
         self.txtRespuesta.Bind(wx.EVT_TEXT, self.Escribiendo)
-        #
-        self.destinatario = destinatario
-        self.ConfigurarVentana()
-
-    def Escribiendo(self, evt):
-        texto = self.txtRespuesta.GetValue()
-        restante = 140 - len(texto)
-        self.carRestantes = restante
-        self.lblCuenta.SetLabel(str(restante))
-        evt.Skip()
-
-    def ConfigurarVentana(self):
+        self.Bind(wx.EVT_CHAR_HOOK, self.LeerTecla)
         self.Bind(wx.EVT_CLOSE, self.CerrandoVentana)
-        datos = self.destinatario.split(',')
-        self.idmensaje = datos[1]
-        self.SetTitle('Responder a @' + datos[0])
+        #
 
     def Show(self, callback=None, cancelCallback=None):
         self.callback = callback
@@ -1161,11 +1184,13 @@ class VentanaResponder(wx.Frame):
 
     def Bloquear(self, bloquear):
         if bloquear:
+            self.bloqueado = True
             self.Disable()
             self.txtRespuesta.Disable()
             self.btnAceptar.Disable()
             self.loaderEnvio.Play()
         else:
+            self.bloqueado = False
             self.Enable()
             self.txtRespuesta.Enable()
             self.btnAceptar.Enable()
