@@ -14,6 +14,7 @@ import time
 import logging
 import re
 from statusnet import *
+import locale
 
 logging.basicConfig()
 log = logging.getLogger('GUI')
@@ -922,14 +923,16 @@ class HiloTimeLine(threading.Thread):
                     if self.time_line != 'messages':
                         tmp += u'Vía %s' % tl['source']
                         fecha = self.ProcesarFecha(tl['created_at'])
-                        tmp += ', ' + str(fecha) + '<br>'
+                        tmp += ', ' + str(fecha)
                         if Repetido:
+                            tmp += '<br>'
                             tmp += ', Repetido por ' + tl[usuario1]['screen_name']
                             if tlr['in_reply_to_user_id'] != None:
                                 tmp += ', en respuesta a <i>' + tlr['in_reply_to_screen_name'] +  '</i>'
                         else:
                             if tl['in_reply_to_user_id'] != None:
-                                tmp += ', en respuesta a <i>' + tl['in_reply_to_screen_name'] +  '</i>'
+                                tmp += '<br>'
+                                tmp += 'En respuesta a <i>' + tl['in_reply_to_screen_name'] +  '</i>'
                     #
                     tmp += '</font>'
                     tmp += '</td>'
@@ -951,12 +954,18 @@ class HiloTimeLine(threading.Thread):
             wx.CallAfter(Publisher().sendMessage, "Hilo_Time_Line", "APP_Desconectado")
 
     def ProcesarFecha(self, fecha):
-        tfecha = fecha[0:19] + fecha[25:]
+        fecha = repr(fecha)
+        filtro = re.compile('(\-)?\d{4} ')
+        tfecha = filtro.sub("", fecha)
         formato = '%a %b %d %H:%M:%S %Y'
-        fechaMensaje = datetime.strptime(tfecha, formato)
-        fechaNueva = 'el ' + str(fechaMensaje.day) + '/' + str(fechaMensaje.month)
-        fechaNueva += '/' + str(fechaMensaje.year) + ' a las ' + [str(fechaMensaje.hour), str(int(fechaMensaje.hour)-12)][fechaMensaje.hour>12]
-        fechaNueva += ':' + str(fechaMensaje.minute) + ['a.m','p.m'][fechaMensaje.hour>=12]
+        try:
+            fechaMensaje = datetime.strptime(tfecha, formato)
+            fechaNueva = 'el ' + str(fechaMensaje.day) + '/' + str(fechaMensaje.month)
+            fechaNueva += '/' + str(fechaMensaje.year) + ' a las ' + [str(fechaMensaje.hour), str(int(fechaMensaje.hour)-12)][fechaMensaje.hour>12]
+            fechaNueva += ':' + str(fechaMensaje.minute) + ['a.m','p.m'][fechaMensaje.hour>=12]
+        except:
+            log.debug('Imposible parsear la fecha')
+            fechaNueva = '(sin fecha)'
         return fechaNueva
 
 
