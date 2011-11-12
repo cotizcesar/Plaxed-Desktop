@@ -2,6 +2,7 @@
 import wx
 import wx.html
 import wx.animate
+import wx.combo
 #from wx.lib.wordwrap import wordwrap
 import threading
 from wx.lib.pubsub import Publisher
@@ -173,20 +174,22 @@ class InterfazPrincipal(wx.Frame):
             Lugar = 'Mensajes'
         if origen == 'conversation':
             Lugar = 'Conversación'
-        self.sBar.SetFields((Lugar,'Autor: @jrcsdev'))
+        self.sBar.SetStatusText(u'Línea de Tiempo: '+Lugar)
 
     def DescargarAvatar(self, ruta_img):
         tmp = ruta_img.split("/")
         img_nombre = tmp[len(tmp) - 1]
         #
         carpetas=''
-        for i in range(3,len(tmp)-1):
-            carpetas = carpetas + '/' + tmp[i]
+        if (len(tmp)>3):
+            for i in range(3,len(tmp)-1):
+                carpetas = carpetas + '/' + tmp[i]
+        else:
+            carpetas = ''
         carpetas = carpetas + '/'
         img_ruta = carpetas + img_nombre
         img_ruta_local = self.dir_imagenes + img_nombre
-        tmp_serv = self.red.servidor.split("//")
-        serv = "www." + tmp_serv[1]
+        serv = tmp[2]
         tmp2 = img_nombre.split('-')
         idu = tmp2[0] #esto es el ID del usuario, antes del primer guion
         if (not os.path.isfile(img_ruta_local)):
@@ -314,9 +317,8 @@ class InterfazPrincipal(wx.Frame):
                 self.txt[self.indiceActual] = self.respuestaTL.txt + self.txt[self.indiceActual]
                 self.scrollBottom[self.indiceActual] = self.cols[0].GetBottom()
             self.cols_vacia[self.indiceActual] = False
-
+            #
             self.InnerHTML(self.txt[self.indiceActual])
-
             self.ActualizarTimer()
 
         if respuesta == 'TL_Intacto':
@@ -324,6 +326,14 @@ class InterfazPrincipal(wx.Frame):
 
         if respuesta == 'APP_Desconectado':
             log.debug('Interrumpiendo TL para reiniciar solicitud **')
+            self.Actualizar()
+        
+        if respuesta == 'Error':
+            log.debug('Ocurrio un error. Reintentando')
+            self.Actualizar()
+        
+        if respuesta == 'TimeOut':
+            log.debug('El servidor no respondio a tiempo. Reintentando')
             self.Actualizar()
 
     def LinkPresionado(self, msj):
@@ -668,6 +678,14 @@ class PlaxedLogin(wx.Frame):
         self.txt_clave.SetMaxLength(30)
         self.boton = wx.Button(self.panel, wx.ID_ANY, 'Ingresar')
         self.imagen = wx.StaticBitmap(self.panel, wx.ID_ANY, wx.Bitmap( u"img/iconosolo64.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, 0 )
+        #
+        #self.cmbLogin = wx.combo.BitmapComboBox(self.panel, pos=(-1,-1), size=(200,-1), style=wx.CB_READONLY)
+        #for srv in APLICACION_SERVIDORES:
+        #    nombre = srv['nombre']
+        #    img = wx.Bitmap('img/' + srv['imagen'])
+        #    self.cmbLogin.Append(nombre, img, nombre)
+        #self.cmbLogin.SetSelection(0)
+            
 
         self.lbl_usuario = wx.StaticText(self.panel, wx.ID_ANY, u"Usuario:", wx.DefaultPosition, wx.DefaultSize, 0 )
         self.lbl_usuario.Wrap( -1 )
@@ -675,6 +693,7 @@ class PlaxedLogin(wx.Frame):
         self.lbl_clave.Wrap( -1 )
 
         self.bsizer.Add(self.imagen, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 30)
+        #self.bsizer.Add(self.cmbLogin, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 3)
         self.bsizer.Add(self.lbl_usuario, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 3)
         self.bsizer.Add(self.txt_usuario, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 3)
         self.bsizer.Add(self.lbl_clave, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 3)
@@ -800,6 +819,13 @@ class HiloTimeLine(threading.Thread):
 
     def run(self):
         self.red = statusNet(self.dicConeccion)
+        resp_login = self.red.respuesta_login
+        if resp_login == '{Error}':
+            wx.CallAfter(Publisher().sendMessage, "Hilo_Time_Line", "Error")
+            return False
+        if resp_login == '{TimeOut}':
+            wx.CallAfter(Publisher().sendMessage, "Hilo_Time_Line", "TimeOut")
+            return False
         if self.red.EstaConectado():
             self.dir_usuario = self.dir_perfiles + str(self.red.miPerfilAttr('id'))
             self.dir_imagenes = self.dir_usuario + '/imagenes/'
@@ -830,9 +856,8 @@ class HiloTimeLine(threading.Thread):
                         self.color_tab = self.color_tab_2
                     cont = cont + 1
                     #Si son mensajes, los usuarios se llaman sender y recipient
-                    usuario2 = 'recipient'
-
                     usuario1 = 'user'
+                    usuario2 = 'recipient'
                     if self.time_line == 'messages':
                         usuario1 = 'sender'
 
@@ -842,8 +867,6 @@ class HiloTimeLine(threading.Thread):
                         Repetido = True
                     except:
                         pass
-
-
 
                     if Repetido:
                         self.DescargarAvatar(tlr[usuario1]['profile_image_url'])
@@ -922,8 +945,8 @@ class HiloTimeLine(threading.Thread):
                     tmp += '<br>'
                     if self.time_line != 'messages':
                         tmp += u'Vía %s' % tl['source']
-                        fecha = self.ProcesarFecha(tl['created_at'])
-                        tmp += ', ' + str(fecha)
+                        fecha = ProcesarFecha(tl['created_at'])
+                        tmp += ', ' + fecha
                         if Repetido:
                             tmp += '<br>'
                             tmp += ', Repetido por ' + tl[usuario1]['screen_name']
@@ -953,22 +976,6 @@ class HiloTimeLine(threading.Thread):
         else:
             wx.CallAfter(Publisher().sendMessage, "Hilo_Time_Line", "APP_Desconectado")
 
-    def ProcesarFecha(self, fecha):
-        fecha = repr(fecha)
-        filtro = re.compile('(\-)?\d{4} ')
-        tfecha = filtro.sub("", fecha)
-        formato = '%a %b %d %H:%M:%S %Y'
-        try:
-            fechaMensaje = datetime.strptime(tfecha, formato)
-            fechaNueva = 'el ' + str(fechaMensaje.day) + '/' + str(fechaMensaje.month)
-            fechaNueva += '/' + str(fechaMensaje.year) + ' a las ' + [str(fechaMensaje.hour), str(int(fechaMensaje.hour)-12)][fechaMensaje.hour>12]
-            fechaNueva += ':' + str(fechaMensaje.minute) + ['a.m','p.m'][fechaMensaje.hour>=12]
-        except:
-            log.debug('Imposible parsear la fecha')
-            fechaNueva = '(sin fecha)'
-        return fechaNueva
-
-
     def RutaOnlineToLocal(self, ruta):
         img_arr = ruta.split("/")
         img_nombre = img_arr[len(img_arr) - 1]
@@ -983,13 +990,15 @@ class HiloTimeLine(threading.Thread):
         img_nombre = tmp[len(tmp) - 1]
         #
         carpetas=''
-        for i in range(3,len(tmp)-1):
-            carpetas = carpetas + '/' + tmp[i]
+        if (len(tmp)>3):
+            for i in range(3,len(tmp)-1):
+                carpetas = carpetas + '/' + tmp[i]
+        else:
+            carpetas = ''
         carpetas = carpetas + '/'
         img_ruta = carpetas + img_nombre
         img_ruta_local = self.dir_imagenes + img_nombre
-        tmp_serv = self.red.servidor.split("//")
-        serv = "www." + tmp_serv[1]
+        serv = tmp[2]
         tmp2 = img_nombre.split('-')
         idu = tmp2[0] #esto es el ID del usuario, antes del primer guion
         if (not os.path.isfile(img_ruta_local)):
