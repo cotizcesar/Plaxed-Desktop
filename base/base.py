@@ -7,7 +7,7 @@ import time
 import logging
 
 #Variables GLOBALES
-APLICACION_VENTANA_TITULO = 'Plaxed Desktop (Pre-Alpha)'
+APLICACION_VENTANA_TITULO = 'Plaxed Desktop'
 APLICACION_SOURCE = "Plaxed Desktop"
 APLICACION_TIEMPO_ESPERA_TIMEOUT = 15
 APLICACION_SERVIDORES = [{'nombre': 'Plaxed', 'ruta': 'http://beta.plaxed.com', 'imagen': 'iconosolo16.png'}, {'nombre': 'Identica', 'ruta': 'http://identi.ca', 'imagen': 'identica.png'}]

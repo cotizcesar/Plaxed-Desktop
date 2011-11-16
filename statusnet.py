@@ -228,8 +228,12 @@ class statusNet():
             leido = open.read()
             log.debug('Enviado: ' + str(leido))
         except urllib2.URLError, e:
-            log.debug('No se pudo contactar al servidor. Razon: ' + str(e))
-            leido = '{TimeOut}'
+            if e.code == 404:
+                log.debug('Imposible responder. Posiblemente se elimino el mensaje. Respuesta: ' + str(e))
+                leido = '{MensajeBorrado}'
+            else:
+                log.debug('No se pudo contactar al servidor. Razon: ' + str(e))            
+                leido = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
             leido = '{TimeOut}'
@@ -261,3 +265,26 @@ class statusNet():
             log.debug('Error desconocido')
             leido = '{Error}'
         return leido
+    
+    def Conversacion(self, conversacion, ultimo=0):
+        if ultimo != 0:
+            filtro = "?since_id=" + str(ultimo)
+        else:
+            filtro = ""
+        try:
+            open = urllib2.urlopen(self.apibase + '/statusnet/conversation/' + conversacion  + '.json' + filtro, '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
+            leido = open.read()
+            miTL = json.loads(leido)
+        except urllib2.URLError, e:
+            log.debug('No se pudo contactar al servidor. Razon: ' + str(e))
+            miTL = '{TimeOut}'
+        except urllib2.HTTPError, e1:
+            log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
+            miTL = '{TimeOut}'
+        except socket.timeout, e2:
+            log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
+            miTL = '{TimeOut}'
+        except:
+            log.debug('Error desconocido')
+            miTL = '{Error}'
+        return miTL
