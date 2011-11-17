@@ -50,6 +50,9 @@ class statusNet():
             self.mi_perfil = json.loads(leido)
             self.var_conectado = True
             self.respuesta_login = '{CredencialValida}'
+        except socket.timeout, e2:
+            log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
+            self.respuesta_login = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('Error HTTP: '+ str(e1.code) + str(e1.read()))
             if e1.code == 401:
@@ -58,9 +61,6 @@ class statusNet():
                 self.respuesta_login = '{Error}'
         except urllib2.URLError, e:
             log.debug('Sin respuesta del servidor. Razon: '+ str(e))
-            self.respuesta_login = '{TimeOut}'
-        except socket.timeout, e2:
-            log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
             self.respuesta_login = '{TimeOut}'
         except:
             log.debug('Error no identificado')

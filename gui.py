@@ -3,7 +3,6 @@ import wx
 import wx.html
 import wx.animate
 import wx.combo
-#from wx.lib.wordwrap import wordwrap
 import threading
 from wx.lib.pubsub import Publisher
 import httplib
@@ -11,7 +10,6 @@ import sys
 import os
 from datetime import datetime
 import time
-#import getpass
 import logging
 import re
 from statusnet import *
@@ -63,11 +61,12 @@ class InterfazPrincipal(wx.Frame):
     color_tab_1 = "#DFF2F8"
     color_tab_2 = "#FFFFFF"
     color_tab = ""
-    def __init__(self, parent, titulo, dicCon):
+    def __init__(self, parent, titulo, coneccion):
         wx.Frame.__init__(self, parent, wx.ID_ANY, titulo, size=(700, 600))
         self.parent = parent
-        self.dicConeccion = dicCon
-        self.Conectar(self.dicConeccion)
+        self.red = coneccion
+        self.dicConeccion = coneccion.dicConeccion
+        self.Iniciar()
 
     def __del__(self):
         try:
@@ -90,16 +89,12 @@ class InterfazPrincipal(wx.Frame):
             return True
         else:
             return False
-
-    def Conectar(self, dicCon):
-        log.debug('Creando Coneccion')
-        self.red = statusNet(self.dicConeccion)
-        if self.red.EstaConectado():
-            log.debug('Se establecio la Coneccion')
-            self.ConfigurarFuentes()
-            self.VerificarDirectorios()
-            self.ConfigurarVentana()
-            self.Actualizar()
+    
+    def Iniciar(self):
+        self.ConfigurarFuentes()
+        self.VerificarDirectorios()
+        self.ConfigurarVentana()
+        self.Actualizar()
 
     def ConfigurarFuentes(self):
         self.Let_Tahoma_16 = wx.Font(16, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
@@ -168,7 +163,6 @@ class InterfazPrincipal(wx.Frame):
     def InnerHTML(self, items):
         log.debug("Inyectando HTML")
         if self.indiceActual == self.tls.index('conversation'):
-            #items=reversed(items)
             items = items[::-1]
         if len(items)>0:
             html = ''
@@ -354,7 +348,10 @@ class InterfazPrincipal(wx.Frame):
                 self.msj[self.indiceActual] = self.respuestaTL.mensajes
             else:
                 self.msj[self.indiceActual] = self.respuestaTL.mensajes + self.msj[self.indiceActual]
-                self.scrollBottom[self.indiceActual] = self.cols[0].GetBottom()
+                if self.EsConversacion():
+                    self.scrollTop = self.cols[0].GetTop()
+                else:
+                    self.scrollBottom[self.indiceActual] = self.cols[0].GetBottom()
             self.cols_vacia[self.indiceActual] = False
             self.InnerHTML(self.msj[self.indiceActual])
             self.ActualizarTimer()
@@ -675,7 +672,7 @@ class InterfazPrincipal(wx.Frame):
     def NuevaColumna(self, origen):
         col = cColumna(self.panel, origen)
         self.h_sizer2.Add(col, 1, wx.EXPAND | wx.ALL, 5)
-        log.debug('Se agrego una colmuna')
+        log.debug('Se agrego una columna')
         return col
 
     def VerificarDirectorios(self):
@@ -855,7 +852,7 @@ class PlaxedLogin(wx.Frame):
         if respuesta == 'LoginAceptado':
             log.debug('Accesando a Interfaz Principal')
             self.sBar.SetStatusText(u'Cargando Aplicación...')
-            frmMain = InterfazPrincipal(self, APLICACION_VENTANA_TITULO, self.dicConeccion)
+            frmMain = InterfazPrincipal(self, APLICACION_VENTANA_TITULO, self.t.red)
         if respuesta == 'LoginRechazado':
             log.debug('Error de Autenticacion')
             self.StopLoader()
@@ -957,14 +954,12 @@ class HiloTimeLine(threading.Thread):
                     except:
                         pass
                         actual_id = int(tl['id'])
-                        
-                    if actual_id <= ultimo_aux:
-                        continue
-                        #si la api devuelve mensajes viejos, se omiten
-                        
                     
-                        
-                        
+                    if self.time_line == 'conversation':
+                        if actual_id <= ultimo_aux:
+                            continue
+                            #En Conversaciones: si se obtienen mensajes viejos, se omiten
+ 
                     #si es una actividad
                     if self.time_line != 'messages' and self.time_line != 'conversation':
                         if tl['source']=='activity':
@@ -1372,5 +1367,6 @@ class PlaxedApp(wx.App):
 
     def __init__(self):
         wx.App.__init__(self, True)
+        locale.setlocale(locale.LC_ALL,"en_US.utf8")
         self.frmLogin = PlaxedLogin(self)
         self.MainLoop()
