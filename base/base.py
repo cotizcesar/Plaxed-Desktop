@@ -7,8 +7,12 @@ from datetime import date
 import time
 import logging
 import locale
+import os
 
-locale.setlocale(locale.LC_ALL,"en_US.utf8")
+if os.name == 'nt':
+    locale.setlocale(locale.LC_ALL, 'enu, enu')
+else:
+    locale.setlocale(locale.LC_ALL,"en_US.utf8")
 
 #Variables GLOBALES
 APLICACION_VENTANA_TITULO = 'Plaxed Desktop'
