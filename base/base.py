@@ -7,12 +7,8 @@ from datetime import date
 import time
 import logging
 import locale
-import os
 
-if os.name == 'nt':
-    locale.setlocale(locale.LC_ALL, 'enu, enu')
-else:
-    locale.setlocale(locale.LC_ALL,"en_US.utf8")
+locale.setlocale(locale.LC_ALL,"en_US.utf8")
 
 #Variables GLOBALES
 APLICACION_VENTANA_TITULO = 'Plaxed Desktop'
@@ -52,8 +48,11 @@ def ProcesarFecha(fecha):
         mes = str(fechaMensaje.month)
         if len(mes)==1:
             mes = "0" + mes
+        hora = str(fechaMensaje.hour)
+        if hora == "0":
+            hora = "12"
         fechaNueva = 'el ' + dia + '/' + mes
-        fechaNueva += '/' + str(fechaMensaje.year) + ' a las ' + [str(fechaMensaje.hour), str(int(fechaMensaje.hour)-12)][fechaMensaje.hour>12]
+        fechaNueva += '/' + str(fechaMensaje.year) + ' a las ' + [hora, str(int(fechaMensaje.hour)-12)][fechaMensaje.hour>12]
         fechaNueva += ':' + minutos + ['a.m','p.m'][fechaMensaje.hour>=12]
     except ValueError, e:
         fechaNueva = '(sin fecha)'

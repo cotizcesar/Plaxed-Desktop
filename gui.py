@@ -89,7 +89,7 @@ class InterfazPrincipal(wx.Frame):
             return True
         else:
             return False
-
+    
     def Iniciar(self):
         self.ConfigurarFuentes()
         self.VerificarDirectorios()
@@ -106,7 +106,7 @@ class InterfazPrincipal(wx.Frame):
         self.Let_Tahoma_10 = wx.Font(10, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
         self.Let_Tahoma_9 = wx.Font(9, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
         self.Let_Tahoma_8 = wx.Font(8, wx.SWISS, wx.NORMAL, wx.NORMAL, False, u'Tahoma')
-
+    
     def EsConversacion(self, indice = -1):
         if indice == -1:
             indice = self.indiceActual
@@ -309,7 +309,7 @@ class InterfazPrincipal(wx.Frame):
         if respuesta == "MensajeBorrado":
             self.vtnRespuesta.Bloquear(False)
             wx.MessageBox(u'No se puede responder. Es posible que se haya borrado el mensaje')
-
+            
 
     def HiloRepetir(self, msj):
         respuesta = msj.data
@@ -330,7 +330,7 @@ class InterfazPrincipal(wx.Frame):
         log.debug('Aplicacion Desconectada')
         log.debug('Se reintentara nuevamente en ' + str(self.intervaloTL) + ' segundos')
         self.ActualizarTimer()
-
+    
     def HiloTimeLine(self, msj):
         respuesta = msj.data
         if respuesta == 'TL_Recargado':
@@ -343,7 +343,7 @@ class InterfazPrincipal(wx.Frame):
             if self.primeraCargaImg:
                 self.primeraCargaImg = False
             self.ultimo[self.indiceActual] = self.respuestaTL.ultimo
-
+            
             if self.cols_vacia[self.indiceActual] == True:
                 self.msj[self.indiceActual] = self.respuestaTL.mensajes
             else:
@@ -355,18 +355,18 @@ class InterfazPrincipal(wx.Frame):
             self.cols_vacia[self.indiceActual] = False
             self.InnerHTML(self.msj[self.indiceActual])
             self.ActualizarTimer()
-
+            
         if respuesta == 'TL_Intacto':
             self.ActualizarTimer()
 
         if respuesta == 'APP_Desconectado':
             log.debug('Interrumpiendo TL para reiniciar solicitud **')
             self.Actualizar()
-
+        
         if respuesta == 'Error':
             log.debug('Ocurrio un error. Reintentando')
             self.Actualizar()
-
+        
         if respuesta == 'TimeOut':
             log.debug('El servidor no respondio a tiempo. Reintentando')
             self.Actualizar()
@@ -391,10 +391,10 @@ class InterfazPrincipal(wx.Frame):
         if url_tipo == 'user':
             wx.MessageBox(u'Los perfiles de usuario no están implementados todavía')
             return False
-
+        
         if url_tipo == 'usernick':
             #link = link.replace('/usernick','') #esto arregla la url para carga el perfil por user y no por id
-            wx.MessageBox(u'Los perfiles de usuario no están implementados todavía')
+            wx.MessageBox(u'Los perfiles de usuario no están implementados todavía')            
             return False
 
         if url_tipo == 'group':
@@ -444,7 +444,7 @@ class InterfazPrincipal(wx.Frame):
                 self.cols_vacia[self.tls.index('conversation')] = True
                 self.scrollTop = -1
             self.CambioLineaDirecto('conversation')
-
+            
 
     def VentanaRespuestaOk(self, txt, idmensaje):
         self.respuestaEnvioDirecto = HiloEnviarMensaje(self, self.dicConeccion, txt, True, idmensaje)
@@ -465,7 +465,7 @@ class InterfazPrincipal(wx.Frame):
         Publisher().subscribe(self.APP_Desconectado, "APP_Desconectado")
         Publisher().subscribe(self.LinkPresionado, "LinkPresionado")
         Publisher().subscribe(self.HiloRepetir, "Hilo_Repetir")
-
+        
         #
         log.debug('Cantidad de TimeLines: '+str(len(self.tls)))
         for i in range(len(self.tls)):
@@ -637,14 +637,14 @@ class InterfazPrincipal(wx.Frame):
         except:
             log.debug('Error al intentar detener Timer')
         self.Actualizar()
-
+    
     def CambioLineaDirecto(self, tl):
         indiceViejo = self.tls.index(self.cols[0].GetOrigen())
         indiceNuevo = self.tls.index(tl)
         if indiceNuevo == indiceViejo:
             log.debug('Seleccionando mismo TL. Se ignora cambio')
             return False
-
+        
         if self.EsConversacion(indiceViejo):
             self.scrollTop = self.cols[0].GetTop()
         else:
@@ -652,7 +652,7 @@ class InterfazPrincipal(wx.Frame):
 
         self.indiceActual = indiceNuevo
         self.cols[0].SetOrigen(self.tls[self.indiceActual])
-
+        
         log.debug('Cambio de Linea de Tiempo')
         #
         #self.InnerHTML('')
@@ -706,13 +706,13 @@ class MiHtmlWindow(wx.html.HtmlWindow):
             return False
         self.enlace = link.GetHref()
         wx.CallAfter(Publisher().sendMessage, "LinkPresionado", "Final de Thread")
-
+    
     def GetTop(self):
         return self.GetViewStart()[1]
-
+    
     def SetTop(self, param):
         self.Scroll(0, param)
-
+        
     def GetBottom(self):
         bottom = self.GetScrollRange(wx.VERTICAL)-self.GetViewStart()[1]
         return bottom
@@ -771,7 +771,7 @@ class PlaxedLogin(wx.Frame):
         #    img = wx.Bitmap('img/' + srv['imagen'])
         #    self.cmbLogin.Append(nombre, img, nombre)
         #self.cmbLogin.SetSelection(0)
-
+            
 
         self.lbl_usuario = wx.StaticText(self.panel, wx.ID_ANY, u"Usuario:", wx.DefaultPosition, wx.DefaultSize, 0 )
         self.lbl_usuario.Wrap( -1 )
@@ -927,16 +927,16 @@ class HiloTimeLine(threading.Thread):
                 mitl = self.red.Buzon(self.ultimo)
             if self.time_line == 'conversation':
                 mitl = self.red.Conversacion(self.conversacion_id, self.ultimo)
-
+                
             if mitl == '{TimeOut}':
                 wx.CallAfter(Publisher().sendMessage, "Hilo_Time_Line", "TimeOut")
                 return False
             if mitl == '{Error}':
                 wx.CallAfter(Publisher().sendMessage, "Hilo_Time_Line", "Error")
                 return False
-
-            cont = 0
-            if len(mitl) > 0:
+            
+            cont = 0            
+            if len(mitl) > 0:                
                 log.debug("Se recibieron mensajes nuevos")
                 log.debug("Parseando los datos")
                 self.mensajes = []
@@ -954,12 +954,12 @@ class HiloTimeLine(threading.Thread):
                     except:
                         pass
                         actual_id = int(tl['id'])
-
+                    
                     if self.time_line == 'conversation':
                         if actual_id <= ultimo_aux:
                             continue
                             #En Conversaciones: si se obtienen mensajes viejos, se omiten
-
+ 
                     #si es una actividad
                     if self.time_line != 'messages' and self.time_line != 'conversation':
                         if tl['source']=='activity':
@@ -967,7 +967,7 @@ class HiloTimeLine(threading.Thread):
                             contenido = tl['statusnet_html']
                             contenido = contenido.replace('started following', u'está siguiendo a')
                             contenido = contenido.replace(self.servidor+'/', self.servidor + '/usernick/')
-
+                            
                             actividad += u'<table width="100%" bgcolor="#DADADA"><tr><td align="right">'
                             actividad += u'<font size="1" color="black"><i>'
                             actividad += contenido
@@ -985,7 +985,7 @@ class HiloTimeLine(threading.Thread):
                     if self.time_line == 'messages':
                         usuario1 = 'sender'
 
-
+                    
 
                     if Repetido:
                         self.DescargarAvatar(tlr[usuario1]['profile_image_url'])
@@ -1056,7 +1056,7 @@ class HiloTimeLine(threading.Thread):
                             tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/favorites/create/%s"><img src="img/link_favorito.png"></a>' % (self.servidor, tlr['id'])
                         else:
                             tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/favorites/create/%s"><img src="img/link_favorito.png"></a>' % (self.servidor, tl['id'])
-
+                        
                         if self.time_line != 'conversation':
                             if Repetido:
                                 tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/conversation/%s"><img src="img/link_contexto.png"></a>' % (self.servidor, tlr['statusnet_conversation_id'])
@@ -1085,9 +1085,9 @@ class HiloTimeLine(threading.Thread):
                     tmp += '</td>'
                     tmp += '</tr>'
                     tmp += '</table>'
-
-
-
+                    
+                    
+                
                     self.mensajes.append(tmp)
                     if self.ultimo == 0:
                         self.ultimo = tl['id']
@@ -1098,10 +1098,10 @@ class HiloTimeLine(threading.Thread):
                     wx.CallAfter(Publisher().sendMessage, "Hilo_Time_Line", "TL_Intacto")
                     log.debug("No existen mensajes nuevos")
                     return False
-
+                
                 log.debug('Cantidad de Mensajes Nuevos: ' + str(len(self.mensajes)))
                 log.debug('Ultimo ID: ' + str(self.ultimo))
-                log.debug("Finalizando descarga de mensajes")
+                log.debug("Finalizando descarga de mensajes")                
                 wx.CallAfter(Publisher().sendMessage, "Hilo_Time_Line", "TL_Recargado")
             else:
                 wx.CallAfter(Publisher().sendMessage, "Hilo_Time_Line", "TL_Intacto")
@@ -1367,10 +1367,6 @@ class PlaxedApp(wx.App):
 
     def __init__(self):
         wx.App.__init__(self, True)
-        log.debug('Sistema: ' + os.name)
-        if os.name == 'nt':
-            locale.setlocale(locale.LC_ALL, 'enu, enu')
-        else:
-            locale.setlocale(locale.LC_ALL,"en_US.utf8")
+        locale.setlocale(locale.LC_ALL,"en_US.utf8")
         self.frmLogin = PlaxedLogin(self)
         self.MainLoop()
