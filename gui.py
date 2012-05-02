@@ -37,7 +37,7 @@ class InterfazPrincipal(wx.Frame):
     scrollBottom = []
     scrollTop = -1
     timer = None  # El timer de actualizar
-    dir_perfiles = './perfiles/'
+    dir_perfiles = './perfiles/' + APLICACION_CARPETA_PERFIL + '/'
     dir_usuario = ''
     dir_imagenes = ''
     app_dir_img = './img/'
@@ -182,6 +182,12 @@ class InterfazPrincipal(wx.Frame):
                 self.cols[0].SetBottom(self.scrollBottom[self.indiceActual])
         log.debug("Finalizando Inyeccion HTML")
 
+    def QuitarMensajeTL(self, id):
+        pass
+        #for i in range(len(self.tls)):
+        #    if not self.tls.index('conversation'):
+        #        self.cols[i]
+
     def ActualizaBarraEstado(self):
         origen = self.cols[0].GetOrigen()
         Lugar = 'No definido'
@@ -323,7 +329,26 @@ class InterfazPrincipal(wx.Frame):
             wx.MessageBox(u'El mensaje no se pudo repetir. Intente nuevamente')
         if respuesta == "APP_Desconectado":
             log.debug('La aplicacion se desconecto y no se pudo repetir el mensaje')
-            wx.MessageBox(u'Aplicación Desconectada! Reintente el envío')
+            wx.MessageBox(u'Aplicación Desconectada! Reintente.')
+
+    def HiloEliminar(self, msj):
+        respuesta = msj.data
+        if respuesta == "TimeOut":
+            log.debug('El servidor no respondio a tiempo')
+            wx.MessageBox(u'El servidor no respondió, se desconoce si fue eliminado')
+        if respuesta == "Eliminado":
+            log.debug('El mensaje se elimino con exito')
+            #
+            log.debug('Mensaje eliminado de los TLs')
+        if respuesta == "NoEliminado":
+            log.debug('El mensaje no se pudo eliminar')
+            wx.MessageBox(u'El mensaje no se pudo eliminar. Intente nuevamente')
+        if respuesta == "NoExiste":
+            log.debug('El mensaje no se pudo eliminar, posiblemente ya no existe.')
+            wx.MessageBox(u'El mensaje no se pudo eliminar. Es posible que ya haya sido eliminado')
+        if respuesta == "APP_Desconectado":
+            log.debug('La aplicacion se desconecto y no se pudo eliminar el mensaje')
+            wx.MessageBox(u'Aplicación Desconectada! Reintente.')
 
 
     def APP_Desconectado(self, msj):
@@ -425,7 +450,13 @@ class InterfazPrincipal(wx.Frame):
 
             if accion == 'delete':
                 id = arreglo[5]
-                wx.MessageBox('Borrar: ' + id)
+                log.debug('Solicitando confirmacion para eliminar (id=%s)' % id)
+                eliminar = self.DialogoConfirmar(u'Desea eliminar este mensaje?')
+                if eliminar:
+                    log.debug('Se acepta la solicitad para eliminar (id=%s)' % id)
+                    hiloEliminar = HiloEliminar(self, self.dicConeccion, id)
+                else:
+                    log.debug('Se cancela la solicitud para eliminar (id=%s)' % id)
 
         if url_tipo == 'favorites':
             accion = arreglo[4]
@@ -465,6 +496,7 @@ class InterfazPrincipal(wx.Frame):
         Publisher().subscribe(self.APP_Desconectado, "APP_Desconectado")
         Publisher().subscribe(self.LinkPresionado, "LinkPresionado")
         Publisher().subscribe(self.HiloRepetir, "Hilo_Repetir")
+        Publisher().subscribe(self.HiloEliminar, "Hilo_Eliminar")
         
         #
         log.debug('Cantidad de TimeLines: '+str(len(self.tls)))
@@ -743,7 +775,7 @@ class cColumna(MiHtmlWindow):
 class PlaxedLogin(wx.Frame):
     Validado = False
     dicConeccion = {}
-    servidor = 'http://beta.plaxed.com'
+    servidor = APLICACION_SERVIDOR
     def __init__(self, parent):
         self.parent = parent
         wx.Frame.__init__(self, None, wx.ID_ANY, APLICACION_VENTANA_TITULO, size=(320, 450))
@@ -765,21 +797,12 @@ class PlaxedLogin(wx.Frame):
         self.boton = wx.Button(self.panel, wx.ID_ANY, 'Ingresar')
         self.imagen = wx.StaticBitmap(self.panel, wx.ID_ANY, wx.Bitmap( u"img/iconosolo64.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, 0 )
         #
-        #self.cmbLogin = wx.combo.BitmapComboBox(self.panel, pos=(-1,-1), size=(200,-1), style=wx.CB_READONLY)
-        #for srv in APLICACION_SERVIDORES:
-        #    nombre = srv['nombre']
-        #    img = wx.Bitmap('img/' + srv['imagen'])
-        #    self.cmbLogin.Append(nombre, img, nombre)
-        #self.cmbLogin.SetSelection(0)
-            
-
         self.lbl_usuario = wx.StaticText(self.panel, wx.ID_ANY, u"Usuario:", wx.DefaultPosition, wx.DefaultSize, 0 )
         self.lbl_usuario.Wrap( -1 )
         self.lbl_clave = wx.StaticText(self.panel, wx.ID_ANY, u"Clave:", wx.DefaultPosition, wx.DefaultSize, 0 )
         self.lbl_clave.Wrap( -1 )
 
         self.bsizer.Add(self.imagen, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 30)
-        #self.bsizer.Add(self.cmbLogin, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 3)
         self.bsizer.Add(self.lbl_usuario, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 3)
         self.bsizer.Add(self.txt_usuario, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 3)
         self.bsizer.Add(self.lbl_clave, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 3)
@@ -885,7 +908,7 @@ class HiloTimeLine(threading.Thread):
     mensajes = []
     ultimo = 0
     time_line = ''
-    dir_perfiles = './perfiles/'
+    dir_perfiles = './perfiles/' + APLICACION_CARPETA_PERFIL + '/'
     dir_usuario = ''
     dir_imagenes = ''
     app_dir_img = './img/'
@@ -1256,6 +1279,33 @@ class HiloRepetir(threading.Thread):
         else:
             wx.CallAfter(Publisher().sendMessage, "Hilo_Repetir", "APP_Desconectado")
 
+class HiloEliminar(threading.Thread):
+    dicConeccion = {}
+    parent = None
+    idmensaje = 0
+    def __init__(self, parent, dicCon, idmensaje):
+        threading.Thread.__init__(self)
+        self.parent = parent
+        self.dicConeccion = dicCon
+        self.idmensaje = idmensaje
+        self.daemon = True
+        self.start()
+
+    def run(self):
+        self.red = statusNet(self.dicConeccion)
+        if self.red.EstaConectado():
+                res = self.red.Eliminar(self.idmensaje)
+                if res == "{TimeOut}":
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Eliminar", "TimeOut")
+                elif res == "{NoExiste}":
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Eliminar", "NoExiste")
+                elif res == "{Error}":
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Eliminar", "NoEliminado")
+                else:
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Eliminar", "Eliminado")
+        else:
+            wx.CallAfter(Publisher().sendMessage, "Hilo_Eliminar", "APP_Desconectado")
+
 
 class VentanaResponder(wx.Frame):
 
@@ -1367,6 +1417,7 @@ class PlaxedApp(wx.App):
 
     def __init__(self):
         wx.App.__init__(self, True)
-        locale.setlocale(locale.LC_ALL,"en_US.utf8")
+        if sys.platform.startswith('linux'):
+            locale.setlocale(locale.LC_ALL,"en_US.utf8")
         self.frmLogin = PlaxedLogin(self)
         self.MainLoop()

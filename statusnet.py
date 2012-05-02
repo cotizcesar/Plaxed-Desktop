@@ -25,12 +25,11 @@ class statusNet():
     app_origen = APLICACION_SOURCE
     respuesta_login = ''
     var_conectado = False
-
     def __init__(self, dicCon):
         self.dicConeccion = dicCon
         self.Configurar()
         self.Conectar()
-
+    
     def Configurar(self):
         self.apibase = self.dicConeccion['servidor'] + "/api"
         self.apibase.replace("//", "/")
@@ -44,7 +43,7 @@ class statusNet():
         self.handler = urllib2.HTTPBasicAuthHandler(pwd_mgr)
         self.opener = urllib2.build_opener(self.handler)
         urllib2.install_opener(self.opener)
-
+        
         try:
             open = urllib2.urlopen(self.apibase + '/account/verify_credentials.json', '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
             leido = open.read()
@@ -55,17 +54,18 @@ class statusNet():
             log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
             self.respuesta_login = '{TimeOut}'
         except urllib2.HTTPError, e1:
-            log.debug('Error HTTP: ' + str(e1.code) + str(e1.read()))
+            log.debug('Error HTTP: '+ str(e1.code) + str(e1.read()))
             if e1.code == 401:
                 self.respuesta_login = '{CredencialInvalida}'
             else:
                 self.respuesta_login = '{Error}'
         except urllib2.URLError, e:
-            log.debug('Sin respuesta del servidor. Razon: ' + str(e))
+            log.debug('Sin respuesta del servidor. Razon: '+ str(e))
             self.respuesta_login = '{TimeOut}'
         except:
             log.debug('Error no identificado')
             self.respuesta_login = '{Error}'
+
 
     def EstaConectado(self):
         return self.var_conectado
@@ -232,7 +232,7 @@ class statusNet():
                 log.debug('Imposible responder. Posiblemente se elimino el mensaje. Respuesta: ' + str(e))
                 leido = '{MensajeBorrado}'
             else:
-                log.debug('No se pudo contactar al servidor. Razon: ' + str(e))
+                log.debug('No se pudo contactar al servidor. Razon: ' + str(e))            
                 leido = '{TimeOut}'
         except urllib2.HTTPError, e1:
             log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
@@ -244,6 +244,7 @@ class statusNet():
             log.debug('Error desconocido')
             leido = '{Error}'
         return leido
+
 
     def Repetir(self, idmensaje):
         try:
@@ -265,6 +266,26 @@ class statusNet():
             leido = '{Error}'
         return leido
 
+    def Eliminar(self, idmensaje):
+        try:
+            paquete = urlencode({'source': self.app_origen})
+            open = urllib2.urlopen(self.apibase + '/statuses/destroy/' + str(idmensaje) + '.json?%s' % paquete, '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
+            leido = open.read()
+            log.debug('Mensaje eliminado: ' + str(leido))
+        except urllib2.URLError, e:
+            log.debug('El mensaje no existe. ' + str(e))
+            leido = '{NoExiste}'
+        except urllib2.HTTPError, e1:
+            log.debug('El servidor no pudo procesar la solicitud. Razon: ' + str(e1.code()) + str(e1.reason))
+            leido = '{TimeOut}'
+        except socket.timeout, e2:
+            log.debug('El Socket devolvio un TimeOut. Detalle: ' + str(e2))
+            leido = '{TimeOut}'
+        except:
+            log.debug('Error desconocido')
+            leido = '{Error}'
+        return leido
+    
     def Conversacion(self, conversacion, ultimo=0):
         if ultimo != 0:
             filtro = "?since_id=" + str(ultimo)

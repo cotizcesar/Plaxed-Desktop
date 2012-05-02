@@ -7,14 +7,23 @@ from datetime import date
 import time
 import logging
 import locale
+import sys
 
-locale.setlocale(locale.LC_ALL,"en_US.utf8")
+if sys.platform.startswith('linux'):
+    locale.setlocale(locale.LC_ALL,"en_US.utf8")
 
 #Variables GLOBALES
 APLICACION_VENTANA_TITULO = 'Plaxed Desktop'
 APLICACION_SOURCE = "Plaxed Desktop"
 APLICACION_TIEMPO_ESPERA_TIMEOUT = 10
-APLICACION_SERVIDORES = [{'nombre': 'Plaxed', 'ruta': 'http://beta.plaxed.com', 'imagen': 'iconosolo16.png'}, {'nombre': 'Identica', 'ruta': 'http://identi.ca', 'imagen': 'identica.png'}]
+APLICACION_SERVIDOR = "http://www.plaxed.com"
+#APLICACION_SERVIDOR = "http://identi.ca"
+if not APLICACION_SERVIDOR.startswith("http://"):
+    APLICACION_SERVIDOR = "http://" + APLICACION_SERVIDOR
+ARR_CARPETA = APLICACION_SERVIDOR.split("//")
+#print ARR_CARPETA
+APLICACION_CARPETA_PERFIL = ARR_CARPETA[1]
+#print APLICACION_CARPETA_PERFIL
 
 logging.basicConfig()
 log = logging.getLogger('BASE')
