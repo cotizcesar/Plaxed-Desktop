@@ -183,10 +183,19 @@ class InterfazPrincipal(wx.Frame):
         log.debug("Finalizando Inyeccion HTML")
 
     def QuitarMensajeTL(self, id):
-        pass
-        #for i in range(len(self.tls)):
-        #    if not self.tls.index('conversation'):
-        #        self.cols[i]
+        #<table id="table_
+        for i in range(len(self.msj)):
+            aux = []
+            items = self.msj[i]
+            if self.tls[i] != ('messages'):                
+            #log.debug('ID BORRADO: '+str(id))
+                for mensaje in items:
+                    #log.debug('FRAGMENTO: ' + str(mensaje).substring(0,40))
+                    if not mensaje.startswith('<table id="table_' + str(id) + '"'):
+                        aux.append(mensaje)
+                self.msj[i] = aux
+        self.InnerHTML(self.msj[self.indiceActual])
+
 
     def ActualizaBarraEstado(self):
         origen = self.cols[0].GetOrigen()
@@ -220,7 +229,7 @@ class InterfazPrincipal(wx.Frame):
         img_ruta_local = self.dir_imagenes + img_nombre
         serv = tmp[2]
         tmp2 = img_nombre.split('-')
-        idu = tmp2[0] #esto es el ID del usuario, antes del primer guion
+        idu = tmp2[0] #esto es el ID del usuario, antes del primer guioon
         if (not os.path.isfile(img_ruta_local)):
             if self.primeraCargaImg:
                 log.debug('Intentando eliminar la imagen antigua')
@@ -336,9 +345,11 @@ class InterfazPrincipal(wx.Frame):
         if respuesta == "TimeOut":
             log.debug('El servidor no respondio a tiempo')
             wx.MessageBox(u'El servidor no respondió, se desconoce si fue eliminado')
-        if respuesta == "Eliminado":
+        if respuesta.startswith("Eliminado"):
             log.debug('El mensaje se elimino con exito')
             #
+            idBorrado = respuesta.split("||")[1]
+            self.QuitarMensajeTL(idBorrado)
             log.debug('Mensaje eliminado de los TLs')
         if respuesta == "NoEliminado":
             log.debug('El mensaje no se pudo eliminar')
@@ -453,6 +464,7 @@ class InterfazPrincipal(wx.Frame):
                 log.debug('Solicitando confirmacion para eliminar (id=%s)' % id)
                 eliminar = self.DialogoConfirmar(u'Desea eliminar este mensaje?')
                 if eliminar:
+                    self.idBorrar = id
                     log.debug('Se acepta la solicitad para eliminar (id=%s)' % id)
                     hiloEliminar = HiloEliminar(self, self.dicConeccion, id)
                 else:
@@ -975,7 +987,6 @@ class HiloTimeLine(threading.Thread):
                         actual_id = int(tlr['id'])
                         Repetido = True
                     except:
-                        pass
                         actual_id = int(tl['id'])
                     
                     if self.time_line == 'conversation':
@@ -1026,7 +1037,7 @@ class HiloTimeLine(threading.Thread):
                         img_ruta_local = self.app_dir_img + 'default.png'
 
                     #tmp += '<table bgcolor="' + self.color_tab + '" width="100%" border="0">'
-                    tmp += '<table bgcolor="white" width="100%" border="0" cellspacing="0">'
+                    tmp += '<table id="table_' + str(actual_id)  + '" bgcolor="white" width="100%" border="0" cellspacing="0">'
                     tmp += '<tr>'
                     tmp += '<td width="48" valign="top" rowspan="2"><img align="left" src="' + img_ruta_local + '"></td>'
                     tmp += '<td valign="top">'
@@ -1302,7 +1313,7 @@ class HiloEliminar(threading.Thread):
                 elif res == "{Error}":
                     wx.CallAfter(Publisher().sendMessage, "Hilo_Eliminar", "NoEliminado")
                 else:
-                    wx.CallAfter(Publisher().sendMessage, "Hilo_Eliminar", "Eliminado")
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Eliminar", "Eliminado||" + str(self.idmensaje))
         else:
             wx.CallAfter(Publisher().sendMessage, "Hilo_Eliminar", "APP_Desconectado")
 
