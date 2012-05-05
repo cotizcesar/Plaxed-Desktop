@@ -183,16 +183,30 @@ class InterfazPrincipal(wx.Frame):
         log.debug("Finalizando Inyeccion HTML")
 
     def QuitarMensajeTL(self, id):
-        #<table id="table_
         for i in range(len(self.msj)):
             aux = []
             items = self.msj[i]
             if self.tls[i] != ('messages'):                
-            #log.debug('ID BORRADO: '+str(id))
                 for mensaje in items:
-                    #log.debug('FRAGMENTO: ' + str(mensaje).substring(0,40))
                     if not mensaje.startswith('<table id="table_' + str(id) + '"'):
                         aux.append(mensaje)
+                self.msj[i] = aux
+        self.InnerHTML(self.msj[self.indiceActual])
+
+    def FavoritoMensajeTL(self, id, operacion):
+        for i in range(len(self.msj)):
+            aux = []
+            items = self.msj[i]
+            if self.tls[i] != ('messages'):                
+                for mensaje in items:
+                    if mensaje.startswith('<table id="table_' + str(id) + '"'):
+                        if operacion == "crear":
+                            mensaje = mensaje.replace("/favorites/create/", "/favorites/destroy/")
+                            mensaje = mensaje.replace("link_favorito_off.png", "link_favorito_on.png")
+                        else:
+                            mensaje = mensaje.replace("/favorites/destroy/", "/favorites/create/")
+                            mensaje = mensaje.replace("link_favorito_on.png", "link_favorito_off.png")
+                    aux.append(mensaje)
                 self.msj[i] = aux
         self.InnerHTML(self.msj[self.indiceActual])
 
@@ -361,6 +375,31 @@ class InterfazPrincipal(wx.Frame):
             log.debug('La aplicacion se desconecto y no se pudo eliminar el mensaje')
             wx.MessageBox(u'Aplicación Desconectada! Reintente.')
 
+    def HiloFavorito(self, msj):
+        respuesta = msj.data
+        if respuesta == "TimeOut":
+            log.debug('El servidor no respondio a tiempo')
+            wx.MessageBox(u'El servidor no respondió, se desconoce si la operación fue completada')
+        if respuesta.startswith("Eliminado"):
+            log.debug('El favorito se elimino con exito')
+            #
+            idFavorito = respuesta.split("||")[1]
+            self.FavoritoMensajeTL(idFavorito, "eliminar")
+        if respuesta.startswith("Creado"):
+            log.debug('El favorito se creo con exito')
+            #
+            idFavorito = respuesta.split("||")[1]
+            self.FavoritoMensajeTL(idFavorito, "crear")
+        if respuesta == "NoEliminado":
+            log.debug('El mensaje no se pudo eliminar')
+            wx.MessageBox(u'El mensaje no se pudo eliminar. Intente nuevamente')
+        if respuesta == "NoExiste":
+            log.debug('No se pudo crear el favorito, posiblemente ya no existe.')
+            wx.MessageBox(u'No se pudo completar la operación. Es posible que el mensaje no exista')
+        if respuesta == "APP_Desconectado":
+            log.debug('La aplicacion se desconecto y no se pudo eliminar el mensaje')
+            wx.MessageBox(u'Aplicación Desconectada! Reintente.')
+
 
     def APP_Desconectado(self, msj):
         log.debug('Aplicacion Desconectada')
@@ -474,9 +513,12 @@ class InterfazPrincipal(wx.Frame):
             accion = arreglo[4]
             id = arreglo[5]
             if accion == 'create':
-                wx.MessageBox('Crear Favorito: ' + id)
+                #wx.MessageBox('Crear Favorito: ' + id)
+                log.debug('Solicitud para crear el favorito (id=%s)' % id)
+                hiloFavorito = HiloFavorito(self, self.dicConeccion, id, "crear")
             if accion == 'destroy':
-                wx.MessageBox('Destruir Favorito: ' + id)
+                log.debug('Solicitud para eliminar el favorito (id=%s)' % id)
+                hiloEliminar = HiloFavorito(self, self.dicConeccion, id, "eliminar")
             #
         if url_tipo == 'conversation':
             id = arreglo[4]
@@ -509,6 +551,7 @@ class InterfazPrincipal(wx.Frame):
         Publisher().subscribe(self.LinkPresionado, "LinkPresionado")
         Publisher().subscribe(self.HiloRepetir, "Hilo_Repetir")
         Publisher().subscribe(self.HiloEliminar, "Hilo_Eliminar")
+        Publisher().subscribe(self.HiloFavorito, "Hilo_Favorito")
         
         #
         log.debug('Cantidad de TimeLines: '+str(len(self.tls)))
@@ -1018,7 +1061,6 @@ class HiloTimeLine(threading.Thread):
                     usuario2 = 'recipient'
                     if self.time_line == 'messages':
                         usuario1 = 'sender'
-
                     
 
                     if Repetido:
@@ -1086,10 +1128,17 @@ class HiloTimeLine(threading.Thread):
                             else:
                                 tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/notice/delete/%s"><img src="img/link_borrar.gif"></a>' % (self.servidor, tl['id'])
                         #
+
                         if Repetido:
-                            tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/favorites/create/%s"><img src="img/link_favorito.png"></a>' % (self.servidor, tlr['id'])
+                            if tlr['favorited']:
+                                tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/favorites/destroy/%s"><img src="img/link_favorito_on.png"></a>' % (self.servidor, tlr['id'])
+                            else:
+                                tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/favorites/create/%s"><img src="img/link_favorito_off.png"></a>' % (self.servidor, tlr['id'])
                         else:
-                            tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/favorites/create/%s"><img src="img/link_favorito.png"></a>' % (self.servidor, tl['id'])
+                            if tl['favorited']:
+                                tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/favorites/destroy/%s"><img src="img/link_favorito_on.png"></a>' % (self.servidor, tl['id'])
+                            else:
+                                tmp += '&nbsp;&nbsp;&nbsp;<a href="%s/favorites/create/%s"><img src="img/link_favorito_off.png"></a>' % (self.servidor, tl['id'])
                         
                         if self.time_line != 'conversation':
                             if Repetido:
@@ -1317,6 +1366,36 @@ class HiloEliminar(threading.Thread):
         else:
             wx.CallAfter(Publisher().sendMessage, "Hilo_Eliminar", "APP_Desconectado")
 
+class HiloFavorito(threading.Thread):
+    dicConeccion = {}
+    parent = None
+    idmensaje = 0
+    operacion = ""
+    def __init__(self, parent, dicCon, idmensaje, operacion):
+        threading.Thread.__init__(self)
+        self.parent = parent
+        self.dicConeccion = dicCon
+        self.idmensaje = idmensaje
+        self.operacion = operacion
+        self.daemon = True
+        self.start()
+
+    def run(self):
+        self.red = statusNet(self.dicConeccion)
+        if self.red.EstaConectado():
+                res = self.red.Favorito(self.idmensaje, self.operacion)
+                if res == "{TimeOut}":
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Favorito", "TimeOut")
+                elif res == "{NoExiste}":
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Favorito", "NoExiste")
+                elif res == "{Error}":
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Favorito", "Error")
+                elif res == "{FavoritoCreado}":
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Favorito", "Creado||" + str(self.idmensaje))
+                else:
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Favorito", "Eliminado||" + str(self.idmensaje))
+        else:
+            wx.CallAfter(Publisher().sendMessage, "Hilo_Favorito", "APP_Desconectado")
 
 class VentanaResponder(wx.Frame):
 

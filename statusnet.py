@@ -285,6 +285,29 @@ class statusNet():
             log.debug('Error desconocido')
             leido = '{Error}'
         return leido
+
+    def Favorito(self, idmensaje, operacion):
+        try:
+            paquete = urlencode({'source': self.app_origen})
+            if operacion == "eliminar":
+                api_operacion = "destroy"
+            else:
+                api_operacion = "create"
+            open = urllib2.urlopen(self.apibase + '/favorites/' + api_operacion + '/' + str(idmensaje) + '.json?%s' % paquete, '', APLICACION_TIEMPO_ESPERA_TIMEOUT)
+            leido = open.read()
+            if api_operacion == "create":
+                leido = "{FavoritoCreado}"
+                log.debug('Favorito creado: ' + str(leido))
+            else:
+                leido = "{FavoritoEliminado}"
+                log.debug('Favorito eliminado: ' + str(leido))
+        except urllib2.URLError, e:
+            log.debug('El mensaje no existe. ' + str(e))
+            leido = '{NoExiste}'
+        except:
+            log.debug('Error desconocido')
+            leido = '{Error}'
+        return leido
     
     def Conversacion(self, conversacion, ultimo=0):
         if ultimo != 0:
