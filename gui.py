@@ -323,7 +323,7 @@ class InterfazPrincipal(wx.Frame):
             log.debug('Mensaje No Enviado')
             self.txt_estado.Enable()
             self.btnAceptar.Enable()
-            self.btnAdjuntarEnable()
+            self.btnAdjuntar.Enable()
         if respuesta == "APP_Desconectado":
             log.debug('Reintente el envio')
             self.txt_estado.Enable()
@@ -656,15 +656,15 @@ class InterfazPrincipal(wx.Frame):
         self.v_sizer3 = wx.BoxSizer(wx.VERTICAL) # Este contiene el boton de envio
         self.btnAceptar = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/aceptar.png", wx.BITMAP_TYPE_ANY ), pos=wx.DefaultPosition, size=(30,30), style=wx.BU_AUTODRAW )
         self.btnAceptar.SetToolTipString(u'Enviar (F5)')
-        self.v_sizer3.Add(self.btnAceptar, 0, wx.ALL, 5)
+        self.v_sizer3.Add(self.btnAceptar, 0, wx.ALL, 2)
         #
         
         self.btnAdjuntar = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/adjuntar.png", wx.BITMAP_TYPE_ANY ), pos=wx.DefaultPosition, size=(30,30), style=wx.BU_AUTODRAW )
         self.btnAdjuntar.SetToolTipString(u'Adjuntar archivo')
-        self.v_sizer3.Add(self.btnAdjuntar, 0, wx.ALL, 5)
+        self.v_sizer3.Add(self.btnAdjuntar, 0, wx.ALL, 2)
         self.lblCuenta = wx.StaticText(self.panel, wx.ID_ANY, '140', wx.DefaultPosition, (30,25), 0)
         self.lblCuenta.SetFont(self.Let_Tahoma_10)
-        self.v_sizer3.Add(self.lblCuenta, 0, wx.ALL, 5)        
+        self.v_sizer3.Add(self.lblCuenta, 0, wx.ALL, 2)        
         #
         self.h_sizer1.Add(self.v_sizer3, 0, 0, 5)
 
