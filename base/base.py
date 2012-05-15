@@ -12,22 +12,23 @@ import sys
 if sys.platform.startswith('linux'):
     locale.setlocale(locale.LC_ALL,"en_US.utf8")
 
+logging.basicConfig()
+log = logging.getLogger('BASE')
+if len(sys.argv) > 1:
+    if sys.argv.index('--debug'):
+        log.setLevel(logging.DEBUG)
+
 #Variables GLOBALES
 APLICACION_VENTANA_TITULO = 'Plaxed Desktop'
 APLICACION_SOURCE = "Plaxed Desktop"
 APLICACION_TIEMPO_ESPERA_TIMEOUT = 10
 APLICACION_SERVIDOR = "http://www.plaxed.com"
-#APLICACION_SERVIDOR = "http://identi.ca"
+APLICACION_SERVIDOR = "http://localhost/statusnet"
 if not APLICACION_SERVIDOR.startswith("http://"):
     APLICACION_SERVIDOR = "http://" + APLICACION_SERVIDOR
 ARR_CARPETA = APLICACION_SERVIDOR.split("//")
-#print ARR_CARPETA
-APLICACION_CARPETA_PERFIL = ARR_CARPETA[1]
-#print APLICACION_CARPETA_PERFIL
-
-logging.basicConfig()
-log = logging.getLogger('BASE')
-log.setLevel(logging.DEBUG)
+APLICACION_CARPETA_PERFIL = ARR_CARPETA[1].replace("/",".")
+log.debug('Generando nombre de carpeta de perfil: ' + APLICACION_CARPETA_PERFIL)
 
 filtroFecha = re.compile('\[fecha\].+\[/fecha\]')
 #Funciones

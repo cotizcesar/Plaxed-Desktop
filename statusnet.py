@@ -3,9 +3,11 @@ import json
 import urllib2
 from urllib import urlencode
 from base.base import *
+from base.multiparte import *
 import logging
 import socket
 import sys
+from xml.dom.minidom import parse, parseString
 
 logging.basicConfig()
 log = logging.getLogger('StatusNET')
@@ -331,3 +333,27 @@ class statusNet():
             log.debug('Error desconocido')
             miTL = '{Error}'
         return miTL
+
+    def Upload(self, ruta):
+        content_type, body = encode_multipart_formdata([['media', open(ruta,"rb").read()]])
+        headers = {'Content-Type': content_type, 'Content-Length': str(len(body))}
+        try:
+            req = urllib2.Request(self.apibase + '/statusnet/media/upload', body, headers)
+            log.debug('Armando requerimiento')
+            respuesta = urllib2.urlopen(req)
+            log.debug('Enviando requerimiento')
+            strXml = respuesta.read()
+            dom = parseString(strXml)
+            rsp = dom.getElementsByTagName('rsp')[0]
+            stat = rsp.attributes.getNamedItem('stat').value
+            if stat == "ok":
+                salida = dom.getElementsByTagName('mediaurl')[0].firstChild.data
+                log.debug('El Upload devolvio: ok')
+            elif stat == "fail":
+                log.debug('El Upload devolvio: fail')
+                salida = 'Fail||' + dom.getElementsByTagName('err')[0].attributes.getNamedItem('msg').value
+        except:
+            log.debug('El Upload devolvio: Error')
+            salida = "{Error}"
+        log.debug('UPLOAD - Salida: ' + salida)
+        return salida

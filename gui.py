@@ -61,6 +61,8 @@ class InterfazPrincipal(wx.Frame):
     color_tab_1 = "#DFF2F8"
     color_tab_2 = "#FFFFFF"
     color_tab = ""
+    adjunto = False
+    adjunto_ruta = ''
     def __init__(self, parent, titulo, coneccion):
         wx.Frame.__init__(self, parent, wx.ID_ANY, titulo, size=(700, 600))
         self.parent = parent
@@ -147,13 +149,22 @@ class InterfazPrincipal(wx.Frame):
         texto = texto.strip()
         if texto != '':
             if self.carRestantes < 0:
+                self.StopLoaderEnvio()
+                self.txt_estado.Enable()
+                self.btnAceptar.Enable()
+                self.btnAdjuntar.Enable()
+                self.txt_estado.SetFocus()
                 wx.MessageBox('No puede exceder los 140 caracteres')
                 return False
             #
             self.txt_estado.Disable()
             self.btnAceptar.Disable()
+            self.btnAdjuntar.Disable()
             self.PlayLoaderEnvio()
-            self.respuestaEnvio = HiloEnviarMensaje(self, self.dicConeccion, texto)
+            if self.adjunto:
+                self.respuestaAdjunto = HiloUpload(self.dicConeccion, self.adjunto_ruta)
+            else:
+                self.respuestaEnvio = HiloEnviarMensaje(self, self.dicConeccion, texto)
         else:
             wx.MessageBox('Debe ingresar un mensaje')
             self.txt_estado.SetValue('')
@@ -301,19 +312,23 @@ class InterfazPrincipal(wx.Frame):
             wx.MessageBox(u'El servidor no respondió, se desconoce si el mensaje fue enviado')
             self.txt_estado.Enable()
             self.btnAceptar.Enable()
+            self.btnAdjuntar.Enable()
         if respuesta == "MensajeEnviado":
             log.debug('Mensaje Enviado')
             self.txt_estado.SetValue('')
             self.txt_estado.Enable()
             self.btnAceptar.Enable()
+            self.btnAdjuntar.Enable()
         if respuesta == "MensajeNoEnviado":
             log.debug('Mensaje No Enviado')
             self.txt_estado.Enable()
             self.btnAceptar.Enable()
+            self.btnAdjuntarEnable()
         if respuesta == "APP_Desconectado":
             log.debug('Reintente el envio')
             self.txt_estado.Enable()
             self.btnAceptar.Enable()
+            self.btnAdjuntar.Enable()
 
     def HiloEnviarMensajeDirecto(self, msj):
         respuesta = msj.data
@@ -374,6 +389,36 @@ class InterfazPrincipal(wx.Frame):
         if respuesta == "APP_Desconectado":
             log.debug('La aplicacion se desconecto y no se pudo eliminar el mensaje')
             wx.MessageBox(u'Aplicación Desconectada! Reintente.')
+
+    def HiloUpload(self, msj):
+        respuesta = msj.data
+        if respuesta == "Error":
+            self.StopLoaderEnvio()
+            self.txt_estado.Enable()
+            self.btnAceptar.Enable()
+            self.btnAdjuntarEnable()
+            wx.MessageBox(u'Error! no se pudo cargar el archivo')            
+        if respuesta.startswith("Fail||"):
+            self.StopLoaderEnvio()
+            self.txt_estado.Enable()
+            self.btnAceptar.Enable()
+            self.btnAdjuntarEnable()
+            msj = respuesta.split("//")[1]
+            wx.MessageBox(u'Error: %s' + msj)
+        if respuesta.startswith("Subido||"):
+            msj = respuesta.split("||")[1]
+            texto = self.txt_estado.GetValue()
+            texto = texto.encode('utf8')
+            texto = texto.strip()
+            if (len(texto)>0):
+                texto = texto + ' '
+            texto = texto + msj
+            self.txt_estado.SetValue(texto)
+            self.adjunto = False
+            self.adjunto_ruta = ''
+            self.btnAdjuntar.SetBitmapLabel(wx.Bitmap( u"img/adjuntar.png", wx.BITMAP_TYPE_ANY ))
+            self.btnAdjuntar.SetToolTipString(u'Adjuntar archivo')
+            self.EnviarMensaje()
 
     def HiloFavorito(self, msj):
         respuesta = msj.data
@@ -552,6 +597,7 @@ class InterfazPrincipal(wx.Frame):
         Publisher().subscribe(self.HiloRepetir, "Hilo_Repetir")
         Publisher().subscribe(self.HiloEliminar, "Hilo_Eliminar")
         Publisher().subscribe(self.HiloFavorito, "Hilo_Favorito")
+        Publisher().subscribe(self.HiloUpload, "Hilo_Upload")
         
         #
         log.debug('Cantidad de TimeLines: '+str(len(self.tls)))
@@ -586,7 +632,7 @@ class InterfazPrincipal(wx.Frame):
         self.txtDescripcion = self.red.miPerfilAttr('description')
         usr_descripcion = self.txtDescripcion
         if usr_descripcion == None:
-            usr_descripcion = u'(Sin Descripción)'
+            usr_descripcion = u'(Sin Biografía)'
         self.lblDescripcion = wx.StaticText(self.panel, wx.ID_ANY, usr_descripcion, wx.DefaultPosition, (-1,25), 0 )
         self.lblDescripcion.SetFont(self.Let_Tahoma_8)
 
@@ -607,19 +653,25 @@ class InterfazPrincipal(wx.Frame):
         self.txt_estado.SetFont(self.Let_Tahoma_10)
         self.h_sizer1.Add(self.txt_estado, 1, wx.ALL|wx.EXPAND, 5)
         #
-        self.v_sizer3 = wx.BoxSizer(wx.VERTICAL) # Este contiene el boton y el label que cuenta
-        self.btnAceptar = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/aceptar.png", wx.BITMAP_TYPE_ANY ), pos=wx.DefaultPosition, size=(40,25), style=wx.BU_AUTODRAW )
+        self.v_sizer3 = wx.BoxSizer(wx.VERTICAL) # Este contiene el boton de envio
+        self.btnAceptar = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/aceptar.png", wx.BITMAP_TYPE_ANY ), pos=wx.DefaultPosition, size=(30,30), style=wx.BU_AUTODRAW )
         self.btnAceptar.SetToolTipString(u'Enviar (F5)')
-        self.lblCuenta = wx.StaticText(self.panel, wx.ID_ANY, '140', wx.DefaultPosition, wx.DefaultSize, 0 )
-        #self.lblCuenta.SetFont( wx.Font(10, 70, 90, wx.NORMAL, False, wx.EmptyString ) )
-        self.lblCuenta.SetFont(self.Let_Tahoma_10)
         self.v_sizer3.Add(self.btnAceptar, 0, wx.ALL, 5)
-        self.v_sizer3.Add(self.lblCuenta, 0, wx.ALL, 5)
+        #
+        
+        self.btnAdjuntar = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/adjuntar.png", wx.BITMAP_TYPE_ANY ), pos=wx.DefaultPosition, size=(30,30), style=wx.BU_AUTODRAW )
+        self.btnAdjuntar.SetToolTipString(u'Adjuntar archivo')
+        self.v_sizer3.Add(self.btnAdjuntar, 0, wx.ALL, 5)
+        self.lblCuenta = wx.StaticText(self.panel, wx.ID_ANY, '140', wx.DefaultPosition, (30,25), 0)
+        self.lblCuenta.SetFont(self.Let_Tahoma_10)
+        self.v_sizer3.Add(self.lblCuenta, 0, wx.ALL, 5)        
+        #
         self.h_sizer1.Add(self.v_sizer3, 0, 0, 5)
 
         #Configurando eventos
         self.panel.Bind(wx.EVT_BUTTON, self.BotonEstado, self.btnAceptar)
         self.txt_estado.Bind(wx.EVT_TEXT, self.EscribeEstado)
+        self.panel.Bind(wx.EVT_BUTTON, self.AdjuntarArchivo, self.btnAdjuntar)
         #self.txt_estado.Bind(wx.EVT_KEY_DOWN, self.AtajosTeclado)
         self.Bind(wx.EVT_CHAR_HOOK, self.AtajosTeclado)
         self.Bind(wx.EVT_CLOSE, self.ConfirmarCierre)
@@ -675,6 +727,27 @@ class InterfazPrincipal(wx.Frame):
         self.cols[0].SetPage(self.html_loader_tl)
         self.Show()
         self.parent.Hide()
+
+    def AdjuntarArchivo(self, event):
+        if self.adjunto:
+            eliminar = self.DialogoConfirmar(u'Desea eliminar el adjunto?')
+            if eliminar:
+                self.btnAdjuntar.SetBitmapLabel(wx.Bitmap( u"img/adjuntar.png", wx.BITMAP_TYPE_ANY ))
+                self.btnAdjuntar.SetToolTipString(u'Adjuntar archivo')
+                self.adjunto = False
+                self.adjunto_ruta = ''
+        else:
+            directorio = ''
+            archivo = ''
+            dlg = wx.FileDialog(self.panel, "Seleccione un archivo", directorio, "", "Todos los archivos (*.*)|*.*", wx.OPEN)
+            if dlg.ShowModal() == wx.ID_OK:
+                archivo = dlg.GetFilename()
+                directorio = dlg.GetDirectory()
+                self.adjunto = True
+                self.adjunto_ruta = os.path.join(directorio, archivo)
+                self.btnAdjuntar.SetBitmapLabel(wx.Bitmap( u"img/adjuntarx.png", wx.BITMAP_TYPE_ANY ))
+                self.btnAdjuntar.SetToolTipString(u'Eliminar adjunto')
+            dlg.Destroy()
 
     def CambioLinea(self, event):
         obj = event.GetEventObject()
@@ -1396,6 +1469,30 @@ class HiloFavorito(threading.Thread):
                     wx.CallAfter(Publisher().sendMessage, "Hilo_Favorito", "Eliminado||" + str(self.idmensaje))
         else:
             wx.CallAfter(Publisher().sendMessage, "Hilo_Favorito", "APP_Desconectado")
+
+class HiloUpload(threading.Thread):
+    dicConeccion = {}
+    parent = None
+    ruta = ''
+    def __init__(self, dicCon, ruta):
+        threading.Thread.__init__(self)
+        self.dicConeccion = dicCon
+        self.ruta = ruta
+        self.daemon = True
+        self.start()
+
+    def run(self):
+        self.red = statusNet(self.dicConeccion)
+        if self.red.EstaConectado():
+                res = self.red.Upload(self.ruta)
+                if res == "{Error}":
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Upload", "Error")
+                elif str(res).startswith('Fail||'):
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Upload", str(res))
+                else:
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Upload", "Subido||" + str(res))
+        else:
+            wx.CallAfter(Publisher().sendMessage, "Hilo_Upload", "APP_Desconectado")
 
 class VentanaResponder(wx.Frame):
 
