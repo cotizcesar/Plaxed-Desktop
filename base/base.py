@@ -23,7 +23,7 @@ APLICACION_VENTANA_TITULO = 'Plaxed Desktop'
 APLICACION_SOURCE = "Plaxed Desktop"
 APLICACION_TIEMPO_ESPERA_TIMEOUT = 10
 APLICACION_SERVIDOR = "http://www.plaxed.com"
-APLICACION_SERVIDOR = "http://localhost/statusnet"
+#APLICACION_SERVIDOR = "http://localhost/statusnet"
 if not APLICACION_SERVIDOR.startswith("http://"):
     APLICACION_SERVIDOR = "http://" + APLICACION_SERVIDOR
 ARR_CARPETA = APLICACION_SERVIDOR.split("//")
