@@ -396,15 +396,15 @@ class InterfazPrincipal(wx.Frame):
             self.StopLoaderEnvio()
             self.txt_estado.Enable()
             self.btnAceptar.Enable()
-            self.btnAdjuntarEnable()
+            self.btnAdjuntar.Enable()
             wx.MessageBox(u'Error! no se pudo cargar el archivo')            
         if respuesta.startswith("Fail||"):
             self.StopLoaderEnvio()
             self.txt_estado.Enable()
             self.btnAceptar.Enable()
-            self.btnAdjuntarEnable()
-            msj = respuesta.split("//")[1]
-            wx.MessageBox(u'Error: %s' + msj)
+            self.btnAdjuntar.Enable()
+            msj = respuesta.split("||")[1]
+            wx.MessageBox(u'Error: %s' % msj)
         if respuesta.startswith("Subido||"):
             msj = respuesta.split("||")[1]
             texto = self.txt_estado.GetValue()
@@ -651,7 +651,7 @@ class InterfazPrincipal(wx.Frame):
         self.h_sizer1 = wx.BoxSizer(wx.HORIZONTAL)
         self.txt_estado = wx.TextCtrl(self.panel, wx.ID_ANY, '', (-1, -1), (-1, 50), style=wx.TE_MULTILINE|wx.TE_NO_VSCROLL|wx.TE_PROCESS_ENTER)
         self.txt_estado.SetFont(self.Let_Tahoma_10)
-        self.h_sizer1.Add(self.txt_estado, 1, wx.ALL|wx.EXPAND, 5)
+        self.h_sizer1.Add(self.txt_estado, 1, wx.ALL|wx.EXPAND, 2)
         #
         self.v_sizer3 = wx.BoxSizer(wx.VERTICAL) # Este contiene el boton de envio
         self.btnAceptar = wx.BitmapButton(self.panel, wx.ID_ANY, wx.Bitmap( u"img/aceptar.png", wx.BITMAP_TYPE_ANY ), pos=wx.DefaultPosition, size=(30,30), style=wx.BU_AUTODRAW )
@@ -738,13 +738,10 @@ class InterfazPrincipal(wx.Frame):
                 self.adjunto_ruta = ''
         else:
             directorio = ''
-            archivo = ''
             dlg = wx.FileDialog(self.panel, "Seleccione un archivo", directorio, "", "Todos los archivos (*.*)|*.*", wx.OPEN)
             if dlg.ShowModal() == wx.ID_OK:
-                archivo = dlg.GetFilename()
-                directorio = dlg.GetDirectory()
                 self.adjunto = True
-                self.adjunto_ruta = os.path.join(directorio, archivo)
+                self.adjunto_ruta = dlg.GetPath()
                 self.btnAdjuntar.SetBitmapLabel(wx.Bitmap( u"img/adjuntarx.png", wx.BITMAP_TYPE_ANY ))
                 self.btnAdjuntar.SetToolTipString(u'Eliminar adjunto')
             dlg.Destroy()
@@ -1487,10 +1484,10 @@ class HiloUpload(threading.Thread):
                 res = self.red.Upload(self.ruta)
                 if res == "{Error}":
                     wx.CallAfter(Publisher().sendMessage, "Hilo_Upload", "Error")
-                elif str(res).startswith('Fail||'):
-                    wx.CallAfter(Publisher().sendMessage, "Hilo_Upload", str(res))
+                elif res.startswith('Fail||'):
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Upload", res)
                 else:
-                    wx.CallAfter(Publisher().sendMessage, "Hilo_Upload", "Subido||" + str(res))
+                    wx.CallAfter(Publisher().sendMessage, "Hilo_Upload", "Subido||" + res)
         else:
             wx.CallAfter(Publisher().sendMessage, "Hilo_Upload", "APP_Desconectado")
 

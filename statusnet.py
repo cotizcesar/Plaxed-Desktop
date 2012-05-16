@@ -351,7 +351,7 @@ class statusNet():
                 log.debug('El Upload devolvio: ok')
             elif stat == "fail":
                 log.debug('El Upload devolvio: fail')
-                salida = 'Fail||' + dom.getElementsByTagName('err')[0].attributes.getNamedItem('msg').value
+                salida = u'Fail||%s' % dom.getElementsByTagName('err')[0].attributes.getNamedItem('msg').value
         except:
             log.debug('El Upload devolvio: Error')
             salida = "{Error}"
