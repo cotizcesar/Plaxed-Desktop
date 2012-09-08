@@ -1,39 +1,42 @@
+NOTA AL 08/09/2012
+El desarrollo de la aplicaciÃ³n no serÃ¡ finalizado porque Plaxed ya no estÃ¡ basado en statusnet, pero queda en manos de cualquier interesado modificar y utilizar el cÃ³digo para adaptarlo a cualquier instancia de Statusnet, y para anexar las funciones faltantes.
+
 NOTA AL 09/04/2012
 
-El desarrollo de la aplicación será retomado. El proyecto estuvo abandonado un tiempo por motivos personales...
+El desarrollo de la aplicaciï¿½n serï¿½ retomado. El proyecto estuvo abandonado un tiempo por motivos personales...
 
 
-DESCRIPCIÓN
+DESCRIPCIï¿½N
 
-Plaxed Desktop es una aplicación de escritorio para la Red Social Venezolana Plaxed.com basado en StatusNet
+Plaxed Desktop es una aplicaciï¿½n de escritorio para la Red Social Venezolana Plaxed.com basado en StatusNet
 
-Actualmente se está trabajando en la implementación de la API, pero se creó una interfaz sencilla que permita realizar pruebas.
+Actualmente se estï¿½ trabajando en la implementaciï¿½n de la API, pero se creï¿½ una interfaz sencilla que permita realizar pruebas.
 
-El hecho de estar basado en StatusNet implica que con solo modificar una línea de código se pueda implementar para otras redes que utilicen este sistema de microblogging.  Unos cambios futuros permitirán agregar los perfiles de red que el usuario prefiera y trabajar con múltiples cuentas a la vez.
+El hecho de estar basado en StatusNet implica que con solo modificar una lï¿½nea de cï¿½digo se pueda implementar para otras redes que utilicen este sistema de microblogging.  Unos cambios futuros permitirï¿½n agregar los perfiles de red que el usuario prefiera y trabajar con mï¿½ltiples cuentas a la vez.
 
 
 REQUERIMIENTOS
 
-Al ser Python  un lenguaje multiplataforma, esta aplicación puede correr fácilmente sobre Windows, Mac y GNU/Linux.
+Al ser Python  un lenguaje multiplataforma, esta aplicaciï¿½n puede correr fï¿½cilmente sobre Windows, Mac y GNU/Linux.
 
-Teóricamente, para ejecutar la aplicación solo se necesita lo siguiente:
+Teï¿½ricamente, para ejecutar la aplicaciï¿½n solo se necesita lo siguiente:
 
 - Python 2.7
 - wxPython para Python 2.7
 
-Aún no se han realizado pruebas en otras versiones de Python para detectar si algún módulo o función ha sufrido cambios.
+Aï¿½n no se han realizado pruebas en otras versiones de Python para detectar si algï¿½n mï¿½dulo o funciï¿½n ha sufrido cambios.
 
 
 
 LICENCIA
-PlaxedDesktop es una aplicación cliente para la Red Social Venezolana www.plaxed.com
-Copyright (C) 2011 Jesús Cabrera jrcsdev@gmail.com
+PlaxedDesktop es una aplicaciï¿½n cliente para la Red Social Venezolana www.plaxed.com
+Copyright (C) 2011 Jesï¿½s Cabrera jrcsdev@gmail.com
 
-Este programa es software libre: Usted puede redistribuirlo y/o modificarlo bajo los términos de la Licencia Pública General de GNU tal como fue publicada por la Free Software Foundation, bien sea la versión de la Licencia o (si lo prefiere) cualquier versión posterior.
+Este programa es software libre: Usted puede redistribuirlo y/o modificarlo bajo los tï¿½rminos de la Licencia Pï¿½blica General de GNU tal como fue publicada por la Free Software Foundation, bien sea la versiï¿½n de la Licencia o (si lo prefiere) cualquier versiï¿½n posterior.
 
-Este programa es distribuido con la intención de que sea útil, pero SIN GARANTÍA ALGUNA; ni siquiera con la garantía implícita de COMERCIALIZACIÓN o IDONEIDAD PARA UN PROPÓSITO PARTICULAR. Véase la Licencia Pública General de GNU para más detalles.
+Este programa es distribuido con la intenciï¿½n de que sea ï¿½til, pero SIN GARANTï¿½A ALGUNA; ni siquiera con la garantï¿½a implï¿½cita de COMERCIALIZACIï¿½N o IDONEIDAD PARA UN PROPï¿½SITO PARTICULAR. Vï¿½ase la Licencia Pï¿½blica General de GNU para mï¿½s detalles.
 
-Usted debe haber recibido una copia de la Licencia Pública General de GNU junto a este programa. Si no es así, diríjase a http://www.gnu.org/licenses/
+Usted debe haber recibido una copia de la Licencia Pï¿½blica General de GNU junto a este programa. Si no es asï¿½, dirï¿½jase a http://www.gnu.org/licenses/
 
 
 CONTACTO
