@@ -1,16 +1,12 @@
 NOTA AL 08/09/2012
 El desarrollo de la aplicación no será finalizado porque Plaxed ya no está basado en statusnet, pero queda en manos de cualquier interesado modificar y utilizar el código para adaptarlo a cualquier instancia de Statusnet, y para anexar las funciones faltantes.
 
-NOTA AL 09/04/2012
 
-El desarrollo de la aplicaci�n ser� retomado. El proyecto estuvo abandonado un tiempo por motivos personales...
+DESCRIPCIÓN
 
+Plaxed Desktop es una aplicación de escritorio para la Red Social Venezolana Plaxed.com basado en StatusNet
 
-DESCRIPCI�N
-
-Plaxed Desktop es una aplicaci�n de escritorio para la Red Social Venezolana Plaxed.com basado en StatusNet
-
-Actualmente se est� trabajando en la implementaci�n de la API, pero se cre� una interfaz sencilla que permita realizar pruebas.
+Actualmente se está trabajando en la implementaci�n de la API, pero se cre� una interfaz sencilla que permita realizar pruebas.
 
 El hecho de estar basado en StatusNet implica que con solo modificar una l�nea de c�digo se pueda implementar para otras redes que utilicen este sistema de microblogging.  Unos cambios futuros permitir�n agregar los perfiles de red que el usuario prefiera y trabajar con m�ltiples cuentas a la vez.
 
